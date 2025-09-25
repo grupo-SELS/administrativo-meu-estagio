@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste de Upload Local de Imagens</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; }
+        input, textarea, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+        button { background: #007bff; color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .result { margin-top: 20px; padding: 20px; border-radius: 8px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .loading { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        .image-preview { margin-top: 15px; }
+        .image-preview img { max-width: 200px; max-height: 200px; margin: 10px; border: 2px solid #ddd; border-radius: 8px; }
+        .file-info { background: #e9ecef; padding: 10px; border-radius: 6px; margin: 5px 0; font-size: 12px; }
+        h1 { color: #2c3e50; text-align: center; margin-bottom: 30px; }
+        .test-info { background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; color: #1565c0; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste de Upload Local de Imagens</h1>
+    
+    <div class="test-info">
+        <strong>Objetivo:</strong> Testar se as imagens enviadas pelo usuário são salvas localmente e retornam URLs válidas
+    </div>
+    
+    <form id="uploadForm">
+        <div class="form-group">
+            <label for="titulo">Título do Comunicado:</label>
+            <input type="text" id="titulo" name="titulo" value="Teste de Upload Local" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="conteudo">Conteúdo:</label>
+            <textarea id="conteudo" name="conteudo" rows="4" required>Este é um teste para verificar se as imagens reais do usuário estão sendo salvas localmente e exibidas corretamente.</textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="polo">Polo:</label>
+            <select id="polo" name="polo">
+                <option value="Volta Redonda">Volta Redonda</option>
+                <option value="Resende">Resende</option>
+                <option value="Angra dos Reis">Angra dos Reis</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="categoria">Categoria:</label>
+            <select id="categoria" name="categoria">
+                <option value="Informativo">Informativo</option>
+                <option value="Urgente">Urgente</option>
+                <option value="Geral">Geral</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="email">Email de contato:</label>
+            <input type="email" id="email" name="email" value="teste@exemplo.com">
+        </div>
+        
+        <div class="form-group">
+            <label for="imagens">🖼️ Selecionar Imagens (até 5):</label>
+            <input type="file" id="imagens" name="imagens" multiple accept="image/*" onchange="previewImages()">
+            <div class="file-info">Formatos aceitos: JPG, PNG, GIF, WebP. Máximo: 5MB por arquivo</div>
+            <div id="imagePreview" class="image-preview"></div>
+        </div>
+        
+        <button type="submit" id="submitBtn">📤 Criar Comunicado e Testar Upload</button>
+    </form>
+    
+    <div id="result"></div>
+
+    <script>
+        function previewImages() {
+            const fileInput = document.getElementById('imagens');
+            const preview = document.getElementById('imagePreview');
+            preview.innerHTML = '';
+            
+            if (fileInput.files.length > 0) {
+                Array.from(fileInput.files).forEach((file, index) => {
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const img = document.createElement('img');
+                            img.src = e.target.result;
+                            img.title = `${file.name} (${(file.size / 1024).toFixed(1)}KB)`;
+                            preview.appendChild(img);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+        }
+
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const resultDiv = document.getElementById('result');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Enviando...';
+            resultDiv.innerHTML = '<div class="result loading"><h3>⏳ Processando upload...</h3><p>Enviando dados e imagens para o servidor...</p></div>';
+            
+            try {
+                const formData = new FormData();
+                formData.append('titulo', document.getElementById('titulo').value);
+                formData.append('conteudo', document.getElementById('conteudo').value);
+                formData.append('polo', document.getElementById('polo').value);
+                formData.append('categoria', document.getElementById('categoria').value);
+                formData.append('email', document.getElementById('email').value);
+                
+                
+                const fileInput = document.getElementById('imagens');
+                Array.from(fileInput.files).forEach(file => {
+                    formData.append('imagens', file);
+                });
+                
+                console.log('📤 Enviando FormData com:', {
+                    titulo: formData.get('titulo'),
+                    arquivos: fileInput.files.length
+                });
+                
+                const response = await fetch('http://localhost:3001/api/comunicados', {
+                    method: 'POST',
+                    headers: {
+                        'x-dev-bypass': 'true'
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                console.log('📨 Resposta do servidor:', data);
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="result success">
+                        <h3>✅ Comunicado criado com sucesso!</h3>
+                        <p><strong>ID:</strong> ${data.id}</p>
+                        <p><strong>Título:</strong> ${data.comunicado.titulo}</p>
+                        <p><strong>Imagens:</strong> ${data.comunicado.imagens ? data.comunicado.imagens.length : 0}</p>
+                        ${data.comunicado.imagens && data.comunicado.imagens.length > 0 ? `
+                            <div class="image-preview">
+                                <h4>🖼️ URLs das imagens geradas:</h4>
+                                ${data.comunicado.imagens.map((url, index) => `
+                                    <div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                                        <strong>Imagem ${index + 1}:</strong><br>
+                                        <code style="font-size: 12px; color: #007bff;">${url}</code><br>
+                                        <img src="${url.startsWith('/uploads/') ? 'http://localhost:3001' + url : url}" 
+                                             alt="Imagem ${index + 1}" style="max-width: 150px; margin-top: 10px; border: 1px solid #ddd;">
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        <p style="margin-top: 15px;"><a href="http://localhost:5174" target="_blank">🔗 Ver no frontend</a></p>
+                    </div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">
+                        <h3>❌ Erro ao criar comunicado</h3>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <p><strong>Erro:</strong> ${data.error || 'Erro desconhecido'}</p>
+                        <details>
+                            <summary>Ver detalhes técnicos</summary>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </details>
+                    </div>`;
+                }
+            } catch (error) {
+                console.error('❌ Erro:', error);
+                resultDiv.innerHTML = `<div class="result error">
+                    <h3>❌ Erro de conexão</h3>
+                    <p>Não foi possível conectar ao servidor: ${error.message}</p>
+                    <p>Verifique se o servidor está rodando em <code>http://localhost:3001</code></p>
+                </div>`;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '📤 Criar Comunicado e Testar Upload';
+            }
+        });
+    </script>
+</body>
+</html>

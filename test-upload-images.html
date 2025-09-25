@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Upload de Imagens</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input, textarea, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        button {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #1d4ed8;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            background-color: #f3f4f6;
+        }
+        
+        .success {
+            background-color: #d1fae5;
+            border: 1px solid #10b981;
+        }
+        
+        .error {
+            background-color: #fee2e2;
+            border: 1px solid #ef4444;
+        }
+        
+        .image-preview {
+            margin-top: 10px;
+        }
+        
+        .image-preview img {
+            max-width: 200px;
+            max-height: 200px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste de Upload de Imagens - URLs Corrigidas</h1>
+    
+    <form id="uploadForm">
+        <div class="form-group">
+            <label for="titulo">Título do Comunicado:</label>
+            <input type="text" id="titulo" name="titulo" value="Teste de Upload" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="conteudo">Conteúdo:</label>
+            <textarea id="conteudo" name="conteudo" rows="4" required>Este é um teste para verificar se o upload de imagens está funcionando corretamente.</textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="imagens">Selecionar Imagens (até 5):</label>
+            <input type="file" id="imagens" name="imagens" multiple accept="image/*">
+        </div>
+        
+        <button type="submit">📤 Criar Comunicado com Imagens</button>
+    </form>
+    
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>⏳ Enviando...</p>';
+            
+            const formData = new FormData();
+            formData.append('titulo', document.getElementById('titulo').value);
+            formData.append('conteudo', document.getElementById('conteudo').value);
+            
+            const imageFiles = document.getElementById('imagens').files;
+            for (let i = 0; i < imageFiles.length; i++) {
+                formData.append('imagens', imageFiles[i]);
+            }
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/comunicados', {
+                    method: 'POST',
+                    headers: {
+                        'X-Dev-Bypass': 'true'
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    let html = `<div class="result success">
+                        <h3>✅ Comunicado criado com sucesso!</h3>
+                        <p><strong>ID:</strong> ${data.id}</p>
+                        <p><strong>Título:</strong> ${data.titulo}</p>
+                        <p><strong>Conteúdo:</strong> ${data.conteudo}</p>
+                    `;
+                    
+                    if (data.imagens && data.imagens.length > 0) {
+                        html += `<p><strong>Imagens (${data.imagens.length}):</strong></p>
+                                <div class="image-preview">`;
+                        
+                        data.imagens.forEach((url, index) => {
+                            html += `<img src="${url}" alt="Imagem ${index + 1}" title="${url}">`;
+                        });
+                        
+                        html += '</div>';
+                        
+                        html += '<p><strong>URLs das imagens:</strong></p><ul>';
+                        data.imagens.forEach((url, index) => {
+                            html += `<li><a href="${url}" target="_blank">${url}</a></li>`;
+                        });
+                        html += '</ul>';
+                    }
+                    
+                    if (data.uploadError) {
+                        html += `<p><strong>⚠️ Aviso:</strong> ${data.uploadError}</p>`;
+                    }
+                    
+                    html += '</div>';
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">
+                        <h3>❌ Erro ao criar comunicado</h3>
+                        <p>${data.error || 'Erro desconhecido'}</p>
+                    </div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">
+                    <h3>❌ Erro de conexão</h3>
+                    <p>Não foi possível conectar ao servidor: ${error.message}</p>
+                    <p>Verifique se o servidor está rodando em http://localhost:3001</p>
+                </div>`;
+            }
+        });
+    </script>
+</body>
+</html>

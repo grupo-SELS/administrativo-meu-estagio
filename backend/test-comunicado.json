@@ -1,0 +1,8 @@
+{
+  "titulo": "Teste Estrutura Completa",
+  "conteudo": "Este é um comunicado de teste com a nova estrutura de campos expandida para armazenamento em notifications.",
+  "polo": "Volta Redonda",
+  "categoria": "Teste",
+  "tags": ["teste", "estrutura", "notifications"],
+  "email": "admin@teste.com"
+}
