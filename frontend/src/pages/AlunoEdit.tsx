@@ -24,6 +24,7 @@ const faltasDetalhadas: Record<number, FaltaDetalhada[]> = {
 import { Header } from "../components/Header";
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { apiService } from '../services/apiService';
 
 interface Student {
     id: number;
@@ -40,64 +41,6 @@ interface Student {
     supervisor?: string;
 }
 
-const mockStudents: Student[] = [
-    {
-        id: 1,
-        name: 'Maxley Lima',
-        matricula: '2021001',
-        localEstagio: 'Hospital São João Batista',
-        professorOrientador: 'Dr. Ana Clara Silva',
-        faltasEstagio: 2,
-        statusMatricula: 'Bloqueado',
-        polo: 'Volta Redonda',
-        email: 'maxley.lima@example.com',
-        telefone: '(24) 99999-9999',
-        turma: '3A',
-        supervisor: 'Enf. Carlos Silva'
-    },
-    {
-        id: 2,
-        name: 'Ana Silva',
-        matricula: '2021002',
-        localEstagio: 'UBS Centro - Resende',
-        professorOrientador: 'Dr. Carlos Mendes',
-        faltasEstagio: 0,
-        statusMatricula: 'Ativo',
-        polo: 'Resende',
-        email: 'ana.silva@example.com',
-        telefone: '(24) 98888-8888',
-        turma: '3B',
-        supervisor: 'Enf. Maria Santos'
-    },
-    {
-        id: 3,
-        name: 'Carlos Oliveira',
-        matricula: '2021003',
-        localEstagio: 'Hospital da Marinha',
-        professorOrientador: 'Dra. Maria Santos',
-        faltasEstagio: 5,
-        statusMatricula: 'Bloqueado',
-        polo: 'Angra dos Reis',
-        email: 'carlos.oliveira@example.com',
-        telefone: '(24) 97777-7777',
-        turma: '3A',
-        supervisor: 'Enf. João Costa'
-    },
-    {
-        id: 4,
-        name: 'Maria Santos',
-        matricula: '2021004',
-        localEstagio: 'CSU Vila Mury',
-        professorOrientador: 'Dr. José Ferreira',
-        faltasEstagio: 1,
-        statusMatricula: 'Ativo',
-        polo: 'Volta Redonda',
-        email: 'maria.santos@example.com',
-        telefone: '(24) 96666-6666',
-        turma: '3C',
-        supervisor: 'Enf. Ana Costa'
-    },
-];
 
 export default function AlunoEdit() {
     const { id } = useParams<{ id: string }>();
@@ -120,15 +63,37 @@ export default function AlunoEdit() {
     });
 
     useEffect(() => {
-        if (id) {
-            const student = mockStudents.find(s => s.id === parseInt(id));
-            if (student) {
-                setFormData(student);
-            } else {
-                navigate('/alunos');
+        async function fetchAluno() {
+            if (id) {
+                setIsLoading(true);
+                try {
+                    const aluno = await apiService.get<any>(`/api/alunos/${id}`);
+                    if (aluno && aluno.id) {
+                        setFormData({
+                            id: aluno.id,
+                            name: aluno.nome || '',
+                            matricula: aluno.matricula || '',
+                            localEstagio: aluno.localEstagio || '',
+                            professorOrientador: aluno.professorOrientador || '',
+                            faltasEstagio: aluno.faltasEstagio || 0,
+                            statusMatricula: aluno.statusMatricula || 'Ativo',
+                            polo: aluno.polo || 'Volta Redonda',
+                            email: aluno.email || '',
+                            telefone: aluno.telefone || '',
+                            turma: aluno.turma || '',
+                            supervisor: aluno.supervisor || ''
+                        });
+                    } else {
+                        navigate('/alunos');
+                    }
+                } catch (error) {
+                    navigate('/alunos');
+                } finally {
+                    setIsLoading(false);
+                }
             }
         }
-        setIsLoading(false);
+        fetchAluno();
     }, [id, navigate]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {

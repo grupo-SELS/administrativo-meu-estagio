@@ -13,6 +13,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import AlunoDetalhes from './pages/AlunoDetalhes';
 import { AlunoCreate } from './pages/AlunoCreate';
 import { PontosFaltas } from './pages/PontosFaltas';
+import AgendamentoEstagio from './pages/AgendamentoEstagio';
 
 export const AppRoutes = () => {
     return (
@@ -33,6 +34,11 @@ export const AppRoutes = () => {
                 <Route path='/alunos' element={
                     <ProtectedRoute>
                         <GerenciamentoAlunos />
+                    </ProtectedRoute>
+                } />
+                <Route path='/agendamento-estagio' element={
+                    <ProtectedRoute>
+                        <AgendamentoEstagio />
                     </ProtectedRoute>
                 } />
                 <Route path='/comunicados/create' element={

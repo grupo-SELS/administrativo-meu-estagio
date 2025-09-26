@@ -81,18 +81,11 @@ async function getAlunoFromFirebase(firebaseId: string): Promise<any | null> {
         id: doc.id,
         nome,
         matricula,
-        autor: data?.autorEmail || data?.autor || data?.senderId || 'Admin',
+        email: data?.email || data?.senderId || 'Admin',
         polo: data?.polo || '',
         categoria: data?.categoria || 'geral',
         tags: data?.tags || [],
         imagens: data?.imagens || (data?.imageUrl ? [data.imageUrl] : []),
-        status: data?.status || 'ativo',
-        ativo: data?.ativo !== false,
-        dataPublicacao: data?.createdAt ?
-          (data.createdAt.toDate ? data.createdAt.toDate().toISOString() : data.createdAt) :
-          new Date().toISOString(),
-        visualizacoes: data?.visualizacoes || 0,
-        ...data
       };
     }
 
@@ -112,7 +105,6 @@ async function updateAlunoInFirebase(firebaseId: string, dados: any): Promise<vo
     const updateData = {
       nome: dados.nome,
       matricula: dados.matricula,
-      autor: dados.autor,
       polo: dados.polo || '',
       categoria: dados.categoria || 'geral',
       tags: dados.tags || [],
@@ -185,12 +177,10 @@ export class alunosController {
       }
 
 
-      const autor = polo ? `Admin - ${polo}` : 'Admin';
 
       const dadosaluno = {
         nome: nomeTrimmed,
         matricula: matriculaTrimmed,
-        autor,
         email: email || '',
         polo: polo || ''
       };
@@ -331,12 +321,10 @@ export class alunosController {
         finalImages = [...finalImages, ...imagens];
       }
 
-      const autor = polo ? `Admin - ${polo}` : (currentData.autor || 'Admin');
 
       const dadosAtualizacao = {
         nome: nome ? nome.trim() : currentData.nome,
         matricula: matricula ? matricula.trim() : currentData.matricula,
-        autor,
         polo: polo !== undefined ? polo : currentData.polo,
         categoria: categoria || currentData.categoria,
         tags: processedTags,

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { auth } from '../config/firebase';
 
 export function LoginPage() {
     const [email, setEmail] = useState('');
@@ -63,7 +64,7 @@ export function LoginPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        
+
         if (!validateForm()) {
             return;
         }
@@ -97,6 +98,9 @@ export function LoginPage() {
         } finally {
             setLoading(false);
         }
+        console.log('🔍 DEBUG - Iniciando login:', { email, password: '***' });
+        console.log('🔍 DEBUG - Auth object existe:', !!auth);
+        console.log('🔍 DEBUG - Firebase config:', auth?.app?.options);
     };
 
     // Função para reset de senha

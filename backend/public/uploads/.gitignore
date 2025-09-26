@@ -9,3 +9,6 @@
 
 # Manter o arquivo .gitkeep
 !.gitkeep
+
+# Firebase
+serviceAccountKey.json

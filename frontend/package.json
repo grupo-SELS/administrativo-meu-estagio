@@ -14,7 +14,7 @@
     "@heroicons/react": "^2.2.0",
     "@tailwindcss/vite": "^4.1.11",
     "cally": "^0.8.0",
-    "firebase": "^12.2.1",
+    "firebase": "^12.3.0",
     "lineicons-react": "^2.0.0",
     "node": "^24.4.0",
     "react": "^19.1.0",

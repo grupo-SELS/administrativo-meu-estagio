@@ -1,5 +1,5 @@
 import { Header } from "../components/Header";
-import { IoIosAdd, IoMdCloseCircleOutline, IoIosTime } from "react-icons/io";
+import { IoIosAdd, IoMdCloseCircleOutline, IoIosTime, IoMdTime } from "react-icons/io";
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { useState, useEffect } from 'react';
@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { apiService } from '../services/apiService';
 import { Link } from 'react-router-dom';
 
-// Mock removido, agora busca da API
+
 
 type Student = {
     id: string;
@@ -152,7 +152,7 @@ function GerenciamentoAlunos() {
         return () => unsubscribe();
     }, [navigate]);
 
-    // Select all handler
+
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
             setSelectedStudentIds(new Set(selectedStudents.map(s => s.id)));
@@ -161,7 +161,7 @@ function GerenciamentoAlunos() {
         }
     };
 
-    // Select single student handler
+
     const handleSelectStudent = (id: string, checked: boolean) => {
         setSelectedStudentIds(prev => {
             const newSet = new Set(prev);
@@ -174,7 +174,7 @@ function GerenciamentoAlunos() {
         });
     };
 
-    // Dummy handlers for actions
+
     const handleCheckAbsences = () => {
         alert("Verificar faltas e atrasos dos alunos selecionados.");
     };
@@ -187,7 +187,7 @@ function GerenciamentoAlunos() {
         }
     };
 
-    // Status badge helper
+
     const getStatusBadge = (status: string) => {
         const baseClasses = "px-1.5 py-0.5 rounded-full text-xs font-medium";
         switch (status) {
@@ -235,6 +235,13 @@ function GerenciamentoAlunos() {
                                     >
                                         <IoIosAdd className="w-5 h-5 transition-transform group-hover:rotate-90 duration-300" />
                                         <span>Novo Aluno</span>
+                                    </Link>
+                                    <Link
+                                        to="/agendamento-estagio"
+                                        className="group flex items-center gap-3 bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-lg border border-gray-700"
+                                    >
+                                        <IoMdTime className="w-5 h-5 transition-transform group-hover:duration-300" />
+                                        <span>Agendar Estágio</span>
                                     </Link>
                                     {selectedStudentIds.size > 0 && (
                                         <>

@@ -240,7 +240,7 @@ export function Notes() {
                                                         </div>
                                                         <div className="flex-col justify-start items-start gap-1 inline-flex">
                                                             <h5 className="text-gray-100 text-sm font-semibold leading-snug">
-                                                                {comunicado.autor}
+                                                                {`admin - ${comunicado.polo || '---'}`}
                                                             </h5>
                                                             <h6 className="text-gray-300 text-xs font-normal leading-5">
                                                                 {getTempoRelativo(comunicado.dataPublicacao)}
