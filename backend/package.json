@@ -7,11 +7,14 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "dev": "ts-node server.ts",
+    "dev": "cross-env NODE_ENV=development ts-node server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "test-firestore": "ts-node test-firestore.ts"
+    "test": "npm run test:connection",
+    "test:connection": "ts-node test-firestore.ts",
+    "test:notifications": "ts-node check-notifications.ts",
+    "cleanup": "node scripts/cleanup-tests.js",
+    "db:clean-notifications": "ts-node delete-all-notifications.ts"
   },
   "dependencies": {
     "axios": "^1.12.2",
@@ -30,6 +33,7 @@
     "@types/morgan": "^1.9.9",
     "@types/multer": "^1.4.11",
     "@types/node": "^20.10.0",
+    "cross-env": "^10.1.0",
     "nodemon": "^3.0.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"

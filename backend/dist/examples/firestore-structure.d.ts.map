@@ -1,1 +1,1 @@
-{"version":3,"file":"firestore-structure.d.ts","sourceRoot":"","sources":["../../examples/firestore-structure.ts"],"names":[],"mappings":"AAGA,eAAO,MAAM,mBAAmB;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;CAiE/B,CAAC;AAGF,eAAO,MAAM,gBAAgB;;;;;;;;;;;;CAmC5B,CAAC"}
+{"version":3,"file":"firestore-structure.d.ts","sourceRoot":"","sources":["../../examples/firestore-structure.ts"],"names":[],"mappings":"AAEA,eAAO,MAAM,mBAAmB;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;CA8D/B,CAAC;AAEF,eAAO,MAAM,gBAAgB;;;;;;;;;;;;CAiC5B,CAAC"}

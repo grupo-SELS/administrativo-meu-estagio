@@ -25,10 +25,6 @@ const CalendarIcon = () => (
   </svg>
 );
 
-/**
- * Props:
- * - alertsData: Um objeto com os valores para cada alerta.
- */
 type AlertsSectionProps = {
   alertsData?: {
     pendingRequests?: number;

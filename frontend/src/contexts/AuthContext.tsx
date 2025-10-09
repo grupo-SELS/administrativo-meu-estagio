@@ -11,12 +11,12 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
-  currentUser: User | null; // ✅ Adicionar para compatibilidade
+  currentUser: User | null; 
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName?: string) => Promise<void>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<void>; // ✅ Adicionar resetPassword
+  resetPassword: (email: string) => Promise<void>; 
   signInAsGuest: () => void;
 }
 
@@ -52,17 +52,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    console.log('🔐 AuthContext - Iniciando login para:', email);
     setLoading(true);
     
     try {
       const { signInWithEmailAndPassword } = await import('firebase/auth');
-      console.log('📡 AuthContext - Fazendo chamada para Firebase Auth...');
       
       const result = await signInWithEmailAndPassword(auth, email, password);
       const firebaseUser = result.user;
-      
-      console.log('✅ AuthContext - Login bem-sucedido:', firebaseUser.email);
       
       const userData: User = {
         uid: firebaseUser.uid,
@@ -73,14 +69,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       setUser(userData);
       localStorage.setItem('auth-user', JSON.stringify(userData));
-      
-      console.log('💾 AuthContext - Usuário salvo no localStorage');
     } catch (error: any) {
       console.error('❌ AuthContext - Erro no login:', error);
       setUser(null);
       localStorage.removeItem('auth-user');
       
-      // Mapear erros específicos do Firebase
+
       let errorMessage = 'Credenciais inválidas ou usuário não encontrado.';
       
       if (error.code) {
@@ -117,7 +111,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const signUp = async (email: string, password: string, displayName?: string) => {
-    console.log('📝 AuthContext - Iniciando registro para:', email);
     setLoading(true);
     
     try {
@@ -138,7 +131,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       setUser(userData);
       localStorage.setItem('auth-user', JSON.stringify(userData));
-      console.log('✅ AuthContext - Usuário registrado com sucesso');
     } catch (error: any) {
       console.error('❌ AuthContext - Erro no registro:', error);
       setUser(null);
@@ -149,14 +141,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  // ✅ Implementar resetPassword
   const resetPassword = async (email: string) => {
-    console.log('🔑 AuthContext - Enviando email de reset para:', email);
-    
     try {
       const { sendPasswordResetEmail } = await import('firebase/auth');
       await sendPasswordResetEmail(auth, email);
-      console.log('✅ AuthContext - Email de reset enviado com sucesso');
     } catch (error: any) {
       console.error('❌ AuthContext - Erro ao enviar email de reset:', error);
       
@@ -185,11 +173,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const signOut = async () => {
-    console.log('👋 AuthContext - Fazendo logout...');
     try {
       setUser(null);
       localStorage.removeItem('auth-user');
-      console.log('✅ AuthContext - Logout realizado com sucesso');
     } catch (error) {
       console.error('❌ AuthContext - Erro no logout:', error);
       throw error;
@@ -197,7 +183,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const signInAsGuest = () => {
-    console.log('👤 AuthContext - Login como convidado');
     const guestUser: User = {
       uid: 'guest-user',
       email: 'convidado@sistema.com',
@@ -210,12 +195,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const value = {
     user,
-    currentUser: user, // ✅ Alias para compatibilidade
+    currentUser: user, 
     loading,
     signIn,
     signUp,
     signOut,
-    resetPassword, // ✅ Agora disponível
+    resetPassword, 
     signInAsGuest
   };
 

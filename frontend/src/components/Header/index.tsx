@@ -4,15 +4,10 @@ import { useAuth } from '../../contexts/AuthContext';
 
 export function Header() {
 	const [menu, setMenu] = useState(false);
-	const [userDropdown, setUserDropdown] = useState(false);
 	const { user, signOut } = useAuth();
 
 	const toggleMenu = () => {
 		setMenu(!menu);
-	};
-
-	const toggleUserDropdown = () => {
-		setUserDropdown(!userDropdown);
 	};
 
 	const handleSignOut = async () => {

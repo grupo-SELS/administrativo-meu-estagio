@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState } from 'react';
 import type { ReactNode } from 'react';
-import Toast from '../components/Toast';
+import { Toast } from '../components/Toast';
 import type { ToastType } from '../components/Toast';
-import ConfirmModal from '../components/ConfirmModal';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 interface ToastData {
   id: string;

@@ -5,26 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.processUploads = exports.uploadMiddleware = void 0;
 const multer_1 = __importDefault(require("multer"));
-const fs_1 = __importDefault(require("fs"));
-const path_1 = __importDefault(require("path"));
-const storage = multer_1.default.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadDir = path_1.default.join(__dirname, '../public/uploads');
-        if (!fs_1.default.existsSync(uploadDir)) {
-            fs_1.default.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const timestamp = Date.now();
-        const randomString = Math.random().toString(36).substring(2, 15);
-        const extension = path_1.default.extname(file.originalname);
-        const filename = `img_${timestamp}_${randomString}${extension}`;
-        cb(null, filename);
-    }
-});
 const upload = (0, multer_1.default)({
-    storage: storage,
+    storage: multer_1.default.memoryStorage(),
     limits: {
         fileSize: 5 * 1024 * 1024,
         files: 5
@@ -43,20 +25,31 @@ const processUploads = async (req, res, next) => {
     try {
         const files = req.files;
         const uploadError = req.body.uploadError;
-        console.log(`📤 processUploads - ${files ? files.length : 0} arquivos recebidos`);
         if (uploadError) {
-            console.log(`⚠️ Upload Error detectado: ${uploadError}`);
             req.body.imagens = [];
             return next();
         }
         if (!files || files.length === 0) {
-            console.log('📷 Nenhum arquivo para processar');
             req.body.imagens = [];
             return next();
         }
-        const imageUrls = files.map(file => `/uploads/${file.filename}`);
-        console.log('✅ URLs das imagens geradas:', imageUrls);
-        req.body.imagens = imageUrls;
+        const fs = require('fs');
+        const path = require('path');
+        const crypto = require('crypto');
+        const uploadDir = path.join(__dirname, '../public/uploads');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        const imagePaths = [];
+        for (const file of files) {
+            const randomName = crypto.randomBytes(8).toString('hex');
+            const ext = path.extname(file.originalname);
+            const filename = `img_${Date.now()}_${randomName}${ext}`;
+            const filePath = path.join(uploadDir, filename);
+            fs.writeFileSync(filePath, file.buffer);
+            imagePaths.push(`/uploads/${filename}`);
+        }
+        req.body.imagens = imagePaths;
         next();
     }
     catch (error) {
@@ -67,3 +60,4 @@ const processUploads = async (req, res, next) => {
     }
 };
 exports.processUploads = processUploads;
+//# sourceMappingURL=uploadMiddleware.js.map

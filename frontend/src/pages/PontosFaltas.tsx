@@ -1,34 +1,7 @@
 import { useState } from "react";
 import { Header } from "../components/Header";
 
-// Exemplo de dados de faltas (substitua por fetch da API se necessário)
-const faltasExemplo = [
-    {
-        id: 1,
-        nomeAluno: "Ana Silva",
-        localEstagio: "Hospital São João Batista",
-        dataFalta: "2025-09-10",
-        justificada: false,
-        justificativa: ""
-    },
-    {
-        id: 2,
-        nomeAluno: "Carlos Oliveira",
-        localEstagio: "UBS Centro - Resende",
-        dataFalta: "2025-09-12",
-        justificada: false,
-        justificativa: ""
-    },
-    {
-        id: 3,
-        nomeAluno: "Maria Santos",
-        localEstagio: "Hospital da Marinha",
-        dataFalta: "2025-09-15",
-        justificada: false,
-        justificativa: ""
-    },
-    
-];
+const faltasExemplo: any[] = [];
 
 type Falta = {
     id: number;

@@ -27,19 +27,13 @@ async function createComunicadoInFirebase(dados: any): Promise<string> {
       polo: dados.polo || '',
       tags: dados.tags || [],
       imagens: dados.imagens || [],
-      status: 'ativo',
       ativo: true,
       prioridade: 'media',
       visualizacoes: 0,
       dataPublicacao: agora.toISOString(),
       imageUrl: dados.imagens && dados.imagens.length > 0 ? dados.imagens[0] : null
     };
-    console.log('[comunicadosController] Criando comunicado em notifications:', notificationData.title);
     const docRef = await notificationsCollection.add(notificationData);
-    console.log(`[comunicadosController] Comunicado criado com ID: ${docRef.id}`);
-    // Confirmação imediata
-    const snap = await docRef.get();
-    console.log('[comunicadosController] snapshot.exists:', snap.exists);
     return docRef.id;
   } catch (error: any) {
     console.error('[comunicadosController] Erro ao criar comunicado:', error);
@@ -47,15 +41,13 @@ async function createComunicadoInFirebase(dados: any): Promise<string> {
   }
 }
 
-// Lê comunicados apenas de 'notifications'
+
 async function getAllComunicadosFromFirebase(): Promise<any[]> {
   try {
-    console.log('[comunicadosController] Listando comunicados da coleção notifications');
     const snapshot = await notificationsCollection.get();
     const comunicados: any[] = [];
     snapshot.forEach((doc) => {
       const data = doc.data();
-      // Aceita qualquer documento que tenha pelo menos título OU mensagem/conteúdo
       const titulo = data.title || data.titulo || '';
       const conteudo = data.message || data.conteudo || '';
       if (titulo || conteudo) {
@@ -68,8 +60,16 @@ async function getAllComunicadosFromFirebase(): Promise<any[]> {
           polo: Array.isArray(data.targetPolos) ? data.targetPolos.join(', ') : (data.polo || ''),
           categoria: Array.isArray(data.targetUserTypes) ? data.targetUserTypes.join(', ') : (data.categoria || data.targetUserTypes || 'geral'),
           tags: data.tags || [],
-          imagens: data.imagens || (data.imageUrl ? [data.imageUrl] : []),
-          status: data.status || 'ativo',
+          imagens: (() => {
+            if (!data.imagens) return data.imageUrl ? [data.imageUrl] : [];
+            if (Array.isArray(data.imagens)) return data.imagens;
+            if (typeof data.imagens === 'string') {
+              return data.imagens.includes(',') 
+                ? data.imagens.split(',').map(img => img.trim()).filter(img => img)
+                : [data.imagens];
+            }
+            return [];
+          })(),
           prioridade: data.prioridade || 'media',
           visualizacoes: data.visualizacoes || 0,
           dataPublicacao: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate().toISOString() : (data.dataPublicacao || new Date().toISOString()),
@@ -81,7 +81,6 @@ async function getAllComunicadosFromFirebase(): Promise<any[]> {
       }
     });
     comunicados.sort((a, b) => new Date(b.dataPublicacao).getTime() - new Date(a.dataPublicacao).getTime());
-    console.log(`[comunicadosController] Total comunicados retornados: ${comunicados.length}`);
     return comunicados;
   } catch (error: any) {
     console.error('[comunicadosController] Erro ao listar comunicados:', error);
@@ -91,13 +90,10 @@ async function getAllComunicadosFromFirebase(): Promise<any[]> {
 
 async function getComunicadoFromFirebase(firebaseId: string): Promise<any | null> {
   try {
-    console.log(`🔍 Buscando comunicado: ${firebaseId}`);
-
     const doc = await notificationsCollection.doc(firebaseId).get();
 
     if (doc.exists) {
       const data = doc.data();
-      console.log(`✅ Comunicado encontrado`);
 
       let title = '';
       let message = data?.message || '';
@@ -119,8 +115,16 @@ async function getComunicadoFromFirebase(firebaseId: string): Promise<any | null
         polo: data?.polo || '',
         categoria: data?.categoria || 'geral',
         tags: data?.tags || [],
-        imagens: data?.imagens || (data?.imageUrl ? [data.imageUrl] : []),
-        status: data?.status || 'ativo',
+        imagens: (() => {
+          if (!data?.imagens) return data?.imageUrl ? [data.imageUrl] : [];
+          if (Array.isArray(data.imagens)) return data.imagens;
+          if (typeof data.imagens === 'string') {
+            return data.imagens.includes(',') 
+              ? data.imagens.split(',').map(img => img.trim()).filter(img => img)
+              : [data.imagens];
+          }
+          return [];
+        })(),
         ativo: data?.ativo !== false,
         dataPublicacao: data?.createdAt ?
           (data.createdAt.toDate ? data.createdAt.toDate().toISOString() : data.createdAt) :
@@ -130,7 +134,6 @@ async function getComunicadoFromFirebase(firebaseId: string): Promise<any | null
       };
     }
 
-    console.log(`❌ Comunicado não encontrado: ${firebaseId}`);
     return null;
   } catch (error: any) {
     console.error('❌ Erro ao buscar comunicado:', error);
@@ -141,8 +144,6 @@ async function getComunicadoFromFirebase(firebaseId: string): Promise<any | null
 
 async function updateComunicadoInFirebase(firebaseId: string, dados: any): Promise<void> {
   try {
-    console.log(`✏️ Atualizando comunicado: ${firebaseId}`);
-
     const updateData = {
       title: dados.title,
       message: dados.message,
@@ -156,8 +157,6 @@ async function updateComunicadoInFirebase(firebaseId: string, dados: any): Promi
     };
 
     await notificationsCollection.doc(firebaseId).update(updateData);
-
-    console.log(`✅ Comunicado atualizado: ${firebaseId}`);
   } catch (error: any) {
     console.error('❌ Erro ao atualizar comunicado:', error);
     throw error;
@@ -166,11 +165,7 @@ async function updateComunicadoInFirebase(firebaseId: string, dados: any): Promi
 
 async function deleteComunicadoFromFirebase(firebaseId: string): Promise<void> {
   try {
-    console.log(`🗑️ Deletando comunicado: ${firebaseId}`);
-
     await notificationsCollection.doc(firebaseId).delete();
-
-    console.log(`✅ Comunicado deletado: ${firebaseId}`);
   } catch (error: any) {
     console.error('❌ Erro ao deletar comunicado:', error);
     throw error;
@@ -181,10 +176,6 @@ export class ComunicadosController {
 
   async criar(req: Request, res: Response): Promise<void> {
     try {
-      console.log('📝 === CRIANDO COMUNICADO NO FIREBASE ===');
-      console.log('📝 Dados recebidos:', JSON.stringify(req.body, null, 2));
-
-      // Aceita tanto 'titulo'/'conteudo' quanto 'title'/'message'
       const title = req.body.title || req.body.titulo || '';
       const message = req.body.message || req.body.conteudo || '';
       const email = req.body.email || '';
@@ -194,21 +185,10 @@ export class ComunicadosController {
       const imagens = req.body.imagens || [];
       const prioridade = req.body.prioridade || 'media';
 
-      console.log('🔍 Valores extraídos:');
-      console.log('  - title:', title, `(tipo: ${typeof title}, length: ${title.length})`);
-      console.log('  - message:', message, `(tipo: ${typeof message}, length: ${message.length})`);
-      console.log('  - polo:', polo);
-      console.log('  - categoria:', categoria);
-      console.log('  - tags:', tags);
-      console.log('  - imagens:', imagens);
-
       const titleTrimmed = title.toString().trim();
       const messageTrimmed = message.toString().trim();
 
       if (!titleTrimmed || !messageTrimmed) {
-        console.log('❌ Validação falhou: campos obrigatórios ausentes');
-        console.log('  - title trimmed:', titleTrimmed);
-        console.log('  - message trimmed:', messageTrimmed);
         res.status(400).json({
           error: 'Título e conteúdo são obrigatórios',
           details: {
@@ -258,12 +238,7 @@ export class ComunicadosController {
         prioridade: prioridade || 'media'
       };
 
-      console.log('💾 Criando comunicado no Firebase:', dadosComunicado.title);
-      console.log('📋 Dados processados:', JSON.stringify(dadosComunicado, null, 2));
-
       const firebaseId = await createComunicadoInFirebase(dadosComunicado);
-
-      console.log('✅ Comunicado criado com sucesso, ID:', firebaseId);
 
       res.status(201).json({
         message: 'Comunicado criado com sucesso',
@@ -272,7 +247,6 @@ export class ComunicadosController {
       });
     } catch (error: any) {
       console.error('❌ Erro ao criar comunicado:', error);
-      console.error('Stack:', error.stack);
       res.status(500).json({
         error: 'Erro ao criar comunicado',
         message: error.message,
@@ -283,8 +257,7 @@ export class ComunicadosController {
 
   async listar(req: Request, res: Response): Promise<void> {
     try {
-      console.log('📋 === LISTANDO COMUNICADOS DO FIREBASE ===');
-      const { polo, categoria, status, limite = 50 } = req.query;
+      const { polo, categoria, limite = 50 } = req.query;
 
       let comunicados = await getAllComunicadosFromFirebase();
 
@@ -292,19 +265,12 @@ export class ComunicadosController {
         comunicados = comunicados.filter((c: any) =>
           c.polo.toLowerCase().includes((polo as string).toLowerCase())
         );
-        console.log(`🔍 Filtrado por polo "${polo}": ${comunicados.length} comunicados`);
       }
 
       if (categoria) {
         comunicados = comunicados.filter((c: any) =>
           c.categoria.toLowerCase() === (categoria as string).toLowerCase()
         );
-        console.log(`🔍 Filtrado por categoria "${categoria}": ${comunicados.length} comunicados`);
-      }
-
-      if (status) {
-        comunicados = comunicados.filter((c: any) => c.status === status);
-        console.log(`🔍 Filtrado por status "${status}": ${comunicados.length} comunicados`);
       }
 
       const limiteNum = Number(limite);
@@ -312,12 +278,10 @@ export class ComunicadosController {
         comunicados = comunicados.slice(0, limiteNum);
       }
 
-      console.log(`✅ Retornando ${comunicados.length} comunicados`);
-
       res.json({
         comunicados,
         total: comunicados.length,
-        filtros: { polo, categoria, status, limite }
+        filtros: { polo, categoria, limite }
       });
     } catch (error: any) {
       console.error('❌ Erro ao listar comunicados:', error);
@@ -327,19 +291,15 @@ export class ComunicadosController {
 
   async buscarPorId(req: Request, res: Response): Promise<void> {
     try {
-      console.log('🔍 === BUSCANDO COMUNICADO POR ID ===');
       const { id } = req.params;
-      console.log(`📋 ID solicitado: ${id}`);
 
       const comunicado = await getComunicadoFromFirebase(id);
 
       if (!comunicado) {
-        console.log(`❌ Comunicado não encontrado: ${id}`);
         res.status(404).json({ error: 'Comunicado não encontrado' });
         return;
       }
 
-      console.log(`✅ Comunicado encontrado: ${comunicado.title}`);
       res.json(comunicado);
     } catch (error: any) {
       console.error('❌ Erro ao buscar comunicado:', error);
@@ -349,22 +309,16 @@ export class ComunicadosController {
 
   async editar(req: Request, res: Response): Promise<void> {
     try {
-      console.log('✏️ === EDITANDO COMUNICADO NO FIREBASE ===');
       const { id } = req.params;
-      console.log(`📋 ID do comunicado: ${id}`);
-      console.log('📝 Dados recebidos:', JSON.stringify(req.body, null, 2));
 
       const { title, message, email, polo, categoria, tags, imagens, existingImages } = req.body;
 
       const currentData = await getComunicadoFromFirebase(id);
 
       if (!currentData) {
-        console.log('❌ Comunicado não encontrado');
         res.status(404).json({ error: 'Comunicado não encontrado' });
         return;
       }
-
-      console.log('📄 Comunicado atual:', currentData.title);
 
       let processedTags = tags || currentData.tags || [];
       if (typeof tags === 'string') {
@@ -401,13 +355,9 @@ export class ComunicadosController {
         imagens: finalImages
       };
 
-      console.log('💾 Atualizando comunicado no Firebase:', dadosAtualizacao.title);
-
       await updateComunicadoInFirebase(id, dadosAtualizacao);
 
       const comunicadoAtualizado = await getComunicadoFromFirebase(id);
-
-      console.log('✅ Comunicado atualizado com sucesso');
 
       res.json({
         message: 'Comunicado atualizado com sucesso',
@@ -422,22 +372,16 @@ export class ComunicadosController {
 
   async deletar(req: Request, res: Response): Promise<void> {
     try {
-      console.log('🗑️ === DELETANDO COMUNICADO DO FIREBASE ===');
       const { id } = req.params;
-      console.log(`📋 ID do comunicado: ${id}`);
 
       const comunicadoData = await getComunicadoFromFirebase(id);
 
       if (!comunicadoData) {
-        console.log('❌ Comunicado não encontrado');
         res.status(404).json({ error: 'Comunicado não encontrado' });
         return;
       }
 
-      console.log(`📄 Deletando comunicado: ${comunicadoData.title}`);
-
       await deleteComunicadoFromFirebase(id);
-      console.log('✅ Comunicado deletado do Firebase');
 
       res.json({
         message: 'Comunicado deletado com sucesso',

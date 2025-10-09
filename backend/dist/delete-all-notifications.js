@@ -46,3 +46,4 @@ deleteAllNotifications()
     console.error('❌ Erro fatal:', error);
     process.exit(1);
 });
+//# sourceMappingURL=delete-all-notifications.js.map

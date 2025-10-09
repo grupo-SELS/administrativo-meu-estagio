@@ -95,3 +95,4 @@ exports.indicesFirestore = {
         }
     ]
 };
+//# sourceMappingURL=firestore-structure.js.map

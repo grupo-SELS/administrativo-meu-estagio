@@ -1,15 +1,13 @@
+interface AlertCardProps {
+  icon: React.ReactNode;
+  title: string;
+  value: string | number;
+  ctaText: string;
+  href: string;
+  iconBgColor: string;
+}
 
-
-/**
- * Props:
- * - icon: O elemento SVG do ícone a ser exibido.
- * - title: O título do card (ex: "Solicitações Pendentes").
- * - value: O número principal a ser destacado.
- * - ctaText: O texto do link de ação (ex: "Ver detalhes").
- * - href: O link para onde o usuário será direcionado.
- * - iconBgColor: A cor de fundo para o ícone (classe Tailwind CSS).
- */
-const AlertCard = ({ icon, title, value, ctaText, href, iconBgColor }) => {
+const AlertCard = ({ icon, title, value, ctaText, href, iconBgColor }: AlertCardProps) => {
   return (
     <div className="relative overflow-hidden rounded-lg bg-white p-5 shadow-md transition-transform duration-300 hover:scale-105 hover:shadow-xl dark:bg-gray-800">
       <div className="flex items-center">

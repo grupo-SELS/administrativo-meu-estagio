@@ -109,7 +109,6 @@ export default function AlunoEdit() {
         setIsLoading(true);
 
         try {
-            console.log('Salvando dados do aluno:', formData);
             await new Promise(resolve => setTimeout(resolve, 1000));
             navigate('/alunos');
         } catch (error) {

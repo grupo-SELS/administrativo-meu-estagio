@@ -2,12 +2,14 @@ import { Header } from "../components/Header";
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { apiService } from "../services/apiService";
-import { useNotification } from "../contexts/NotificationContext";
+import { useToast } from "../contexts/ToastContext";
+import { useConfirm } from "../hooks/useConfirm";
 
 export const NotesEdit = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
-    const { success, error, warning, showConfirm } = useNotification();
+    const { showSuccess, showError, showWarning } = useToast();
+    const { confirm, ConfirmComponent } = useConfirm();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState<string>("");
@@ -29,17 +31,15 @@ export const NotesEdit = () => {
     useEffect(() => {
         const loadComunicado = async () => {
             if (!id) {
-                error('Erro', 'ID do comunicado não fornecido');
+                showError('ID do comunicado não fornecido');
                 navigate('/comunicados');
                 return;
             }
 
             try {
                 setIsLoading(true);
-                console.log('📖 Carregando comunicado para edição:', id);
                 
                 const comunicado = await apiService.getComunicadoById(id);
-                console.log('📄 Dados carregados:', comunicado);
                 
 
                 setFormData({
@@ -54,19 +54,18 @@ export const NotesEdit = () => {
 
                 if (comunicado.imagens && comunicado.imagens.length > 0) {
                     setExistingImages(comunicado.imagens);
-                    console.log('🖼️ Imagens existentes:', comunicado.imagens);
                 }
 
                 setIsLoading(false);
             } catch (err: any) {
-                console.error('❌ Erro ao carregar comunicado:', err);
-                error('Erro ao carregar', 'Não foi possível carregar os dados do comunicado.');
+                console.error('Erro ao carregar comunicado:', err);
+                showError('Não foi possível carregar os dados do comunicado.');
                 navigate('/comunicados');
             }
         };
 
         loadComunicado();
-    }, [id, navigate, error]);
+    }, [id, navigate, showError]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -119,7 +118,7 @@ export const NotesEdit = () => {
         e.preventDefault();
         
         if (!formData.titulo || !formData.conteudo) {
-            warning('Campos obrigatórios', 'Por favor, preencha todos os campos obrigatórios.');
+            showWarning('Por favor, preencha todos os campos obrigatórios.');
             return;
         }
 
@@ -139,12 +138,10 @@ export const NotesEdit = () => {
                 imagens: selectedImages.length > 0 ? selectedImages : undefined, 
                 existingImages: existingImages 
             };
-
-            console.log('🔄 Atualizando comunicado:', comunicadoData);
             
             try {
                 await apiService.updateComunicado(id!, comunicadoData);
-                success('Comunicado atualizado', 'Comunicado atualizado com sucesso!');
+                showSuccess('Comunicado atualizado com sucesso!');
                 
                 navigate('/comunicados');
             } catch (uploadError: any) {
@@ -155,14 +152,12 @@ export const NotesEdit = () => {
                     uploadError.message.includes('storage') ||
                     uploadError.message.includes('Firebase')
                 )) {
-                    console.warn('⚠️ Erro no upload de imagens, tentando sem imagens...');
+                    console.warn('Erro no upload de imagens, tentando sem imagens...');
                     
                     
-                    const confirmWithoutImages = await showConfirm({
+                    const confirmWithoutImages = await confirm({
                         title: 'Erro no upload de imagens',
                         message: 'Erro no upload de novas imagens. Deseja atualizar o comunicado mantendo apenas as imagens existentes?',
-                        confirmText: 'Atualizar sem novas imagens',
-                        cancelText: 'Cancelar',
                         type: 'warning'
                     });
                     
@@ -175,7 +170,7 @@ export const NotesEdit = () => {
                         };
                         
                         await apiService.updateComunicado(id!, comunicadoSemImagens);
-                        success('Comunicado atualizado', 'Comunicado atualizado com sucesso (sem novas imagens)');
+                        showSuccess('Comunicado atualizado com sucesso (sem novas imagens)');
                         navigate('/comunicados');
                     } else {
                         throw uploadError; 
@@ -184,16 +179,16 @@ export const NotesEdit = () => {
                     throw uploadError; 
                 }
             }
-        } catch (error: any) {
-            console.error('❌ Erro detalhado ao atualizar comunicado:', error);
-            console.error('❌ Stack trace:', error.stack);
+        } catch (err: any) {
+            console.error('Erro detalhado ao atualizar comunicado:', err);
+            console.error('Stack trace:', err.stack);
             
             let errorMessage = 'Erro ao atualizar comunicado. Tente novamente.';
-            if (error.message) {
-                errorMessage = `${error.message}`;
+            if (err.message) {
+                errorMessage = `${err.message}`;
             }
             
-            error('Erro ao atualizar comunicado', errorMessage);
+            showError(errorMessage);
         } finally {
             setIsSubmitting(false);
         }
@@ -522,6 +517,7 @@ export const NotesEdit = () => {
                     </div>
                 </div>
             </div>
+            <ConfirmComponent />
         </>
     );
 };

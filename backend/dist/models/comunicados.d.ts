@@ -1,27 +1,21 @@
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 export interface Comunicado {
     id: string;
-    title: string;
-    message: string;
-    type: 'comunicado';
-    senderId: string;
-    createdAt: Timestamp | FieldValue;
-    updatedAt: Timestamp | FieldValue;
-    scheduledDate?: Timestamp | null;
-    targetPolos: string[];
-    targetUserTypes: string[];
+    titulo: string;
+    conteudo: string;
     autor: string;
-    autorEmail?: string;
-    categoria: string;
-    polo: string;
-    tags: string[];
-    imagens: string[];
-    status: string;
+    email?: string;
+    polo?: string;
+    categoria?: string;
+    prioridade?: string;
+    dataPublicacao: Timestamp | FieldValue;
+    dataVencimento?: Timestamp;
+    tags?: string[];
+    imagens?: string[];
+    visualizacoes?: number;
     ativo: boolean;
-    prioridade: string;
-    visualizacoes: number;
-    dataPublicacao: string;
-    imageUrl?: string | null;
+    criadoEm: Timestamp | FieldValue;
+    atualizadoEm: Timestamp | FieldValue;
 }
 export interface CreateComunicadoDTO {
     titulo: string;
@@ -29,10 +23,9 @@ export interface CreateComunicadoDTO {
     email?: string;
     polo?: string;
     categoria?: string;
-    status?: string;
     prioridade?: string;
+    dataVencimento?: string;
     tags?: string[];
-    imagens?: string[];
 }
 export interface UpdateComunicadoDTO {
     titulo?: string;
@@ -40,15 +33,14 @@ export interface UpdateComunicadoDTO {
     email?: string;
     polo?: string;
     categoria?: string;
-    status?: string;
     prioridade?: string;
+    dataVencimento?: string;
     tags?: string[];
-    imagens?: string[];
 }
 export interface ComunicadoFilters {
     polo?: string;
     categoria?: string;
-    status?: string;
     prioridade?: string;
     limite?: number;
 }
+//# sourceMappingURL=comunicados.d.ts.map

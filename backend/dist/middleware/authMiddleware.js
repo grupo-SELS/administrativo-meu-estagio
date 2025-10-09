@@ -24,7 +24,6 @@ async function authMiddleware(req, res, next) {
         try {
             const decodedToken = await firebase_admin_1.auth.verifyIdToken(token);
             req.user = decodedToken;
-            console.log(`🔐 Usuário autenticado: ${decodedToken.email || decodedToken.uid}`);
             next();
         }
         catch (verifyError) {
@@ -78,3 +77,4 @@ async function adminMiddleware(req, res, next) {
         return;
     }
 }
+//# sourceMappingURL=authMiddleware.js.map

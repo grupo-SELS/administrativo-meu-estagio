@@ -2,6 +2,8 @@ import { Router } from 'express';
 import comunicadosController from '../controllers/comunicadosController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { uploadMiddleware, processUploads } from '../middleware/uploadMiddleware';
+import { apiRateLimit, strictRateLimit } from '../middleware/rateLimitMiddleware';
+import { sanitizeBody, validateRequired, validateId, validateFileType, validateFileSize } from '../middleware/validationMiddleware';
 
 const router = Router();
 const controller = comunicadosController;
@@ -9,7 +11,6 @@ const controller = comunicadosController;
 
 const devAuthBypass = (req: any, res: any, next: any) => {
   if (process.env.NODE_ENV === 'development' || req.headers['x-dev-bypass']) {
-    console.log('🔓 Bypass de autenticação ativado para desenvolvimento');
     req.user = {
       uid: 'dev-user',
       email: 'dev@test.com',
@@ -20,48 +21,37 @@ const devAuthBypass = (req: any, res: any, next: any) => {
   return authMiddleware(req, res, next);
 };
 
-router.get('/comunicados', controller.listar.bind(controller));
-router.get('/comunicados/:id', controller.buscarPorId.bind(controller));
+router.get('/comunicados', apiRateLimit, controller.listar.bind(controller));
+router.get('/comunicados/:id', apiRateLimit, validateId('id'), controller.buscarPorId.bind(controller));
 
 router.post('/comunicados', 
-  (req, res, next) => {
-    console.log('📥 POST /comunicados recebido');
-    console.log('Headers:', req.headers);
-    console.log('Content-Type:', req.get('Content-Type'));
-    console.log('Body keys:', Object.keys(req.body));
-    next();
-  },
+  strictRateLimit,
   devAuthBypass,
-  uploadMiddleware, 
+  sanitizeBody,
+  validateRequired(['titulo', 'conteudo']),
+  uploadMiddleware,
+  validateFileType(['jpg', 'jpeg', 'png', 'gif', 'webp']),
+  validateFileSize(5), 
   processUploads,
   controller.criar.bind(controller)
 );
 
 router.put('/comunicados/:id', 
-  (req, res, next) => {
-    console.log('📥 PUT /comunicados/:id recebido');
-    console.log('📋 ID:', req.params.id);
-    console.log('Headers:', req.headers);
-    console.log('Content-Type:', req.get('Content-Type'));
-    console.log('Body keys:', Object.keys(req.body));
-    next();
-  },
+  strictRateLimit,
   devAuthBypass,
-  uploadMiddleware, 
+  validateId('id'),
+  sanitizeBody,
+  uploadMiddleware,
+  validateFileType(['jpg', 'jpeg', 'png', 'gif', 'webp']),
+  validateFileSize(5),
   processUploads,
   controller.editar.bind(controller)
 );
 
 router.delete('/comunicados/:id', 
-  (req, res, next) => {
-    console.log('🗑️ DELETE /comunicados/:id recebido');
-    console.log('📋 ID:', req.params.id);
-    console.log('Headers:', req.headers);
-    console.log('URL completa:', req.url);
-    console.log('Método:', req.method);
-    next();
-  },
-  devAuthBypass, 
+  strictRateLimit,
+  devAuthBypass,
+  validateId('id'),
   controller.deletar.bind(controller)
 );
 

@@ -2,24 +2,28 @@ const API_BASE_URL = 'http://localhost:3001';
 
 
 export const processImageUrl = (imageUrl: string): string => {
-  console.log('🔄 Processing image URL:', imageUrl);
+  if (!imageUrl) return '';
   
 
-  if (imageUrl.startsWith('/uploads/')) {
-    const fullUrl = `${API_BASE_URL}${imageUrl}`;
-    console.log('✅ Local image URL generated:', fullUrl);
-    return fullUrl;
-  }
-  
-
-  if (imageUrl.startsWith('https://storage.googleapis.com/')) {
-    console.log('✅ Firebase Storage URL detected:', imageUrl);
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
     return imageUrl;
   }
   
 
-  console.log('↩️ Returning original URL:', imageUrl);
-  return imageUrl;
+  if (imageUrl.startsWith('/uploads/')) {
+    return `${API_BASE_URL}${imageUrl}`;
+  }
+  
+
+  if (imageUrl.includes('img_') && !imageUrl.startsWith('/')) {
+    return `${API_BASE_URL}/uploads/${imageUrl}`;
+  }
+  
+  if (imageUrl.includes('storage.googleapis.com') || imageUrl.includes('firebasestorage')) {
+    return imageUrl;
+  }
+  
+  return `${API_BASE_URL}/uploads/${imageUrl}`;
 };
 
 
@@ -58,28 +62,54 @@ export interface CreateComunicadoRequest {
 }
 
 class ApiService {
-  async get<T>(endpoint: string): Promise<T> {
-    return this.request<T>(endpoint, { method: 'GET' });
-  }
   private async getAuthHeaders(): Promise<HeadersInit> {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
 
+    // Adiciona header de bypass em desenvolvimento
+    const isDev = import.meta.env.DEV;
+    const isDevEnv = import.meta.env.VITE_ENV === 'development';
+    if (isDev || isDevEnv) {
+      headers['x-dev-bypass'] = 'true';
+    }
+
     try {
-      // Firebase Auth
       const auth = await import('firebase/auth');
       const appAuth = auth.getAuth();
       const user = appAuth.currentUser;
+      
       if (user) {
         const token = await user.getIdToken();
         headers['Authorization'] = `Bearer ${token}`;
       }
     } catch (error) {
-      console.error('Erro ao obter token JWT do Firebase Auth:', error);
+      console.error('❌ Erro ao obter token JWT do Firebase Auth:', error);
     }
 
     return headers;
+  }
+
+  async get<T>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, { method: 'GET' });
+  }
+
+  async delete<T>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, { method: 'DELETE' });
+  }
+
+  async post<T>(endpoint: string, data: any): Promise<T> {
+    return this.request<T>(endpoint, { 
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async put<T>(endpoint: string, data: any): Promise<T> {
+    return this.request<T>(endpoint, { 
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
   }
 
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -95,12 +125,19 @@ class ApiService {
       });
 
       if (!response.ok) {
+        console.error(`❌ Erro HTTP ${response.status} em ${endpoint}`);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       return await response.json();
-    } catch (error) {
-      console.error(`Erro na API (${endpoint}):`, error);
+    } catch (error: any) {
+      if (error instanceof TypeError || error.message?.includes('fetch') || error.message?.includes('Failed to fetch')) {
+        console.warn(`⚠️ Backend não disponível em ${endpoint}. Verifique se o servidor está rodando.`);
+        const backendError = new Error('BACKEND_OFFLINE');
+        (backendError as any).originalError = error;
+        throw backendError;
+      }
+      console.error(`❌ Erro na API (${endpoint}):`, error);
       throw error;
     }
   }
@@ -256,6 +293,68 @@ class ApiService {
       comunicados_encontrados: number;
       comunicados: any[];
     }>('/test-firestore');
+  }
+
+
+  async criarAgendamento(data: {
+    localEstagio: string;
+    area: string;
+    vagasDisponiveis?: number;
+    horarioInicio: string;
+    horarioFim: string;
+    aluno: string;
+    alunoId?: string;
+    professor: string;
+    professorId?: string;
+    observacoes?: string;
+    data: string;
+    status?: 'confirmado' | 'pendente' | 'cancelado';
+  }) {
+    return this.request<{ message: string; id: string; agendamento: any }>('/api/agendamentos', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listarAgendamentos() {
+    return this.request<{ agendamentos: any[] }>('/api/agendamentos');
+  }
+
+  async buscarAgendamentoPorId(id: string) {
+    return this.request<{ agendamento: any }>(`/api/agendamentos/${id}`);
+  }
+
+  async buscarAgendamentosPorPeriodo(dataInicio: string, dataFim: string) {
+    return this.request<{ agendamentos: any[] }>(`/api/agendamentos/periodo?dataInicio=${dataInicio}&dataFim=${dataFim}`);
+  }
+
+  async editarAgendamento(id: string, data: Partial<{
+    localEstagio: string;
+    area: string;
+    horarioInicio: string;
+    horarioFim: string;
+    aluno: string;
+    alunoId?: string;
+    professor: string;
+    professorId?: string;
+    observacoes?: string;
+    data: string;
+    status?: 'confirmado' | 'pendente' | 'cancelado';
+  }>) {
+    return this.request<{ message: string; agendamento: any }>(`/api/agendamentos/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletarAgendamento(id: string) {
+    return this.request<{ message: string; id: string }>(`/api/agendamentos/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async listarProfessores() {
+    return this.request<{ professores: any[] }>('/api/professores');
   }
 }
 

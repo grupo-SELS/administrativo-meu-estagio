@@ -1,16 +1,16 @@
 import { Header } from "../components/Header"
+import { type PontoRegistrado } from '../data/pontos'
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import { IoTimeOutline } from "react-icons/io5";
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { pontosRegistradosMock, type PontoRegistrado } from '../data/pontos'
 
-export default function DropdownData() {
+function DropdownData({ selectedPeriod, onPeriodChange }: { selectedPeriod: string | null, onPeriodChange: (period: string | null) => void }) {
     return (
         <Menu as="div" className="relative inline-block">
             <MenuButton className="inline-flex w-full justify-center gap-x-1.5 rounded-md bg-white/10 px-3 py-2 text-sm font-semibold text-white inset-ring-1 inset-ring-white/5 hover:bg-white/20">
-                Todos
+                {selectedPeriod || 'Todos'}
                 <ChevronDownIcon aria-hidden="true" className="-mr-1 size-5 text-gray-400" />
             </MenuButton>
 
@@ -20,58 +20,64 @@ export default function DropdownData() {
             >
                 <div className="py-1">
                     <MenuItem>
-                        <a
-                            href="#"
-                            className="block px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:text-white data-focus:outline-hidden"
+                        <button
+                            onClick={() => onPeriodChange(null)}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:text-white data-focus:outline-hidden"
+                        >
+                            Todos
+                        </button>
+                    </MenuItem>
+                    <MenuItem>
+                        <button
+                            onClick={() => onPeriodChange('Hoje')}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:text-white data-focus:outline-hidden"
                         >
                             Hoje
-                        </a>
+                        </button>
                     </MenuItem>
                     <MenuItem>
-                        <a
-                            href="#"
-                            className="block px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:text-white data-focus:outline-hidden"
+                        <button
+                            onClick={() => onPeriodChange('Essa semana')}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:text-white data-focus:outline-hidden"
                         >
                             Essa semana
-                        </a>
+                        </button>
                     </MenuItem>
                     <MenuItem>
-                        <a
-                            href="#"
-                            className="block px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:text-white data-focus:outline-hidden"
+                        <button
+                            onClick={() => onPeriodChange('Últimos 15 dias')}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:text-white data-focus:outline-hidden"
                         >
                             Últimos 15 dias
-                        </a>
+                        </button>
                     </MenuItem>
-                    <form action="#" method="POST">
-                        <MenuItem>
-                            <button
-                                type="submit"
-                                className="block w-full px-4 py-2 text-left text-sm text-gray-300 data-focus:bg-white/5 data-focus:text-white data-focus:outline-hidden"
-                            >
-                                Último mês
-                            </button>
-                        </MenuItem>
-                        <MenuItem>
-                            <button
-                                type="submit"
-                                className="block w-full px-4 py-2 text-left text-sm text-gray-300 data-focus:bg-white/5 data-focus:text-white data-focus:outline-hidden"
-                            >
-                                Último ano
-                            </button>
-                        </MenuItem>
-                    </form>
+                    <MenuItem>
+                        <button
+                            onClick={() => onPeriodChange('Último mês')}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:text-white data-focus:outline-hidden"
+                        >
+                            Último mês
+                        </button>
+                    </MenuItem>
+                    <MenuItem>
+                        <button
+                            onClick={() => onPeriodChange('Último ano')}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:text-white data-focus:outline-hidden"
+                        >
+                            Último ano
+                        </button>
+                    </MenuItem>
                 </div>
             </MenuItems>
         </Menu>
     )
 }
 
-export function DropdownPolo() {
+function DropdownPolo({ selectedPolo, onPoloChange }: { selectedPolo: string | null, onPoloChange: (polo: string | null) => void }) {
     return (
         <Menu as="div" className="relative inline-block">
             <MenuButton className="inline-flex w-full justify-center gap-x-1.5 rounded-md bg-white/10 px-3 py-2 text-sm font-semibold text-white inset-ring-1 inset-ring-white/5 hover:bg-white/20">
-                Todos
+                {selectedPolo || 'Todos'}
                 <ChevronDownIcon aria-hidden="true" className="-mr-1 size-5 text-gray-400" />
             </MenuButton>
 
@@ -81,32 +87,37 @@ export function DropdownPolo() {
             >
                 <div className="py-1">
                     <MenuItem>
-                        <a
-                            href="#"
-                            className="block px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:text-white data-focus:outline-hidden"
+                        <button
+                            onClick={() => onPoloChange(null)}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:text-white data-focus:outline-hidden"
+                        >
+                            Todos
+                        </button>
+                    </MenuItem>
+                    <MenuItem>
+                        <button
+                            onClick={() => onPoloChange('Volta Redonda')}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:text-white data-focus:outline-hidden"
                         >
                             Volta Redonda
-                        </a>
+                        </button>
                     </MenuItem>
                     <MenuItem>
-                        <a
-                            href="#"
-                            className="block px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:text-white data-focus:outline-hidden"
+                        <button
+                            onClick={() => onPoloChange('Resende')}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:text-white data-focus:outline-hidden"
                         >
                             Resende
-                        </a>
+                        </button>
                     </MenuItem>
                     <MenuItem>
-                        <a
-                            href="#"
-                            className="block px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:text-white data-focus:outline-hidden"
+                        <button
+                            onClick={() => onPoloChange('Angra dos Reis')}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-300 data-focus:bg-white/5 data-focus:text-white data-focus:outline-hidden"
                         >
                             Angra dos Reis
-                        </a>
+                        </button>
                     </MenuItem>
-                    <form action="#" method="POST">
-
-                    </form>
                 </div>
             </MenuItems>
         </Menu>
@@ -115,8 +126,10 @@ export function DropdownPolo() {
 
 
 export const PontosRegistrados = () => {
-    const [pontos] = useState<PontoRegistrado[]>(pontosRegistradosMock);
+    const [pontos] = useState<PontoRegistrado[]>([]);
     const [selectedPontoIds, setSelectedPontoIds] = useState<Set<number>>(new Set());
+    const [filterPeriod, setFilterPeriod] = useState<string | null>(null);
+    const [filterPolo, setFilterPolo] = useState<string | null>(null);
 
 
     const handleSelectAll = (checked: boolean) => {
@@ -181,9 +194,9 @@ export const PontosRegistrados = () => {
                     <h2 className="text-gray-100 ">Filtrar por: </h2>
                     <div className="flex gap-4 text-gray-100 items-center">
                         <h2>Data:</h2>
-                        < DropdownData />
+                        <DropdownData selectedPeriod={filterPeriod} onPeriodChange={setFilterPeriod} />
                         <h2>Polo:</h2>
-                        < DropdownPolo />
+                        <DropdownPolo selectedPolo={filterPolo} onPoloChange={setFilterPolo} />
                     </div>
 
                 </div>

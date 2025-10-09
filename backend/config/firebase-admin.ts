@@ -11,8 +11,7 @@ try {
     serviceAccount = require('./serviceAccountKey.json');
   }
 } catch (error) {
-  console.error('⚠️  Service Account Key não encontrado. Configure FIREBASE_SERVICE_ACCOUNT ou adicione serviceAccountKey.json');
-  console.log('📖 Instruções: https://firebase.google.com/docs/admin/setup#initialize-sdk');
+  console.error('❌ Service Account Key não encontrado. Configure FIREBASE_SERVICE_ACCOUNT ou adicione serviceAccountKey.json');
 }
 
 if (!admin.apps.length && serviceAccount) {
@@ -21,13 +20,11 @@ if (!admin.apps.length && serviceAccount) {
       credential: admin.credential.cert(serviceAccount),
       storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${serviceAccount.project_id}.appspot.com`
     });
-    console.log('🔥 Firebase Admin SDK inicializado com sucesso');
-    console.log(`📦 Storage Bucket: ${process.env.FIREBASE_STORAGE_BUCKET || `${serviceAccount.project_id}.appspot.com`}`);
   } catch (error: any) {
     console.error('❌ Erro ao inicializar Firebase Admin:', error.message);
   }
 } else if (!serviceAccount) {
-  console.warn('⚠️ Firebase não inicializado - Service Account não configurado');
+  console.error('❌ Firebase não inicializado - Service Account não configurado');
 }
 
 export const db = getFirestore();

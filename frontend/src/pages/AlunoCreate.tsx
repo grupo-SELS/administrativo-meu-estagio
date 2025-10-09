@@ -1,6 +1,7 @@
 import { Header } from "../components/Header";
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useToast } from '../contexts/ToastContext';
 
 interface Student {
     id: number;
@@ -19,9 +20,9 @@ interface Student {
 
 export const AlunoCreate = () => {
 
-    const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const [isLoading, setIsLoading] = useState(true);
+    const { showSuccess, showError } = useToast();
+    const [isLoading, setIsLoading] = useState(false);
     const [formData, setFormData] = useState<Student>({
         id: 0,
         name: '',
@@ -51,12 +52,41 @@ export const AlunoCreate = () => {
         setIsLoading(true);
 
         try {
-            console.log('Salvando dados do aluno:', formData);
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            console.log('📝 Enviando dados do aluno:', formData);
+            
+            const alunoData = {
+                nome: formData.name,
+                cpf: formData.matricula, // Usando matrícula como CPF temporariamente
+                email: formData.email || `${formData.matricula}@aluno.com`,
+                polo: formData.polo,
+                localEstagio: formData.localEstagio,
+                professorOrientador: formData.professorOrientador,
+                statusMatricula: formData.statusMatricula,
+                turma: formData.turma,
+                telefone: formData.telefone
+            };
+
+            const response = await fetch('http://localhost:3001/api/alunos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-dev-bypass': 'true'
+                },
+                body: JSON.stringify(alunoData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Erro ao criar aluno');
+            }
+
+            const result = await response.json();
+            console.log('✅ Aluno criado:', result);
+            showSuccess('Aluno criado com sucesso!');
             navigate('/alunos');
-        } catch (error) {
-            console.error('Erro ao salvar:', error);
-            alert('Erro ao salvar as informações do aluno');
+        } catch (error: any) {
+            console.error('❌ Erro ao salvar:', error);
+            showError(`Erro ao salvar: ${error.message}`);
         } finally {
             setIsLoading(false);
         }

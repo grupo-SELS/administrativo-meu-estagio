@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../config/firebase';
 
 export function LoginPage() {
     const [email, setEmail] = useState('');
@@ -14,17 +13,14 @@ export function LoginPage() {
     const { signIn, resetPassword } = useAuth();
     const navigate = useNavigate();
 
-    // Validação de email
     const validateEmail = (email: string): boolean => {
         return /\S+@\S+\.\S+/.test(email);
     };
 
-    // Validação de senha
     const validatePassword = (password: string): boolean => {
         return password.length >= 6;
     };
 
-    // Limpar erros ao digitar
     const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setEmail(e.target.value);
         if (error) setError('');
@@ -36,7 +32,6 @@ export function LoginPage() {
         if (error) setError('');
     };
 
-    // Validação client-side
     const validateForm = (): boolean => {
         if (!email.trim()) {
             setError('Email é obrigatório.');
@@ -98,12 +93,8 @@ export function LoginPage() {
         } finally {
             setLoading(false);
         }
-        console.log('🔍 DEBUG - Iniciando login:', { email, password: '***' });
-        console.log('🔍 DEBUG - Auth object existe:', !!auth);
-        console.log('🔍 DEBUG - Firebase config:', auth?.app?.options);
     };
 
-    // Função para reset de senha
     const handleForgotPassword = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -228,7 +219,6 @@ z"/>
                     )}
 
                     {showResetForm ? (
-                        // Formulário de Reset de Senha
                         <form onSubmit={handleForgotPassword} className="space-y-6" noValidate>
                             <div>
                                 <label htmlFor="reset-email" className="block text-sm/6 font-medium text-gray-100">
@@ -276,7 +266,6 @@ z"/>
                             </div>
                         </form>
                     ) : (
-                        // Formulário de Login
                         <form onSubmit={handleSubmit} className="space-y-6" noValidate>
                             <div>
                                 <label htmlFor="email" className="block text-sm/6 font-medium text-gray-100">

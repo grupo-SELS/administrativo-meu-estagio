@@ -38,7 +38,7 @@ export const processUploads = async (req: Request, res: Response, next: NextFunc
     }
     
     console.log('🔄 Processando arquivos recebidos pelo upload');
-    req.body.imagens = [`/notifications/comunicados/imagem-placeholder.jpg`]; // Placeholder
+    req.body.imagens = [`/notifications/comunicados/imagem-placeholder.jpg`]; 
     
     next();
   } catch (error: any) {

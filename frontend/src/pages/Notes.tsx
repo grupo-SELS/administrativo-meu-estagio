@@ -2,54 +2,51 @@ import { Header } from "../components/Header";
 import { CompanyLogo } from "../components/CompanyLogo";
 import { IoIosAdd } from "react-icons/io";
 import { SlOptionsVertical } from "react-icons/sl";
-import { FiChevronLeft, FiChevronRight, FiEdit3, FiTrash2 } from "react-icons/fi";
+import { FiEdit3, FiTrash2 } from "react-icons/fi";
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiService, type Comunicado } from '../services/apiService';
-import { useNotification } from '../contexts/NotificationContext';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
 
 export function Notes() {
     const navigate = useNavigate();
-    const { success, error: showError, showConfirm } = useNotification();
+    const { showSuccess, showError } = useToast();
+    const { confirm, ConfirmComponent } = useConfirm();
     const [edit, setEdit] = useState<string | null>(null);
     const [comunicados, setComunicados] = useState<Comunicado[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [currentPage, setCurrentPage] = useState(1);
     const [imageModal, setImageModal] = useState<{ isOpen: boolean; imageUrl: string; title: string }>({
         isOpen: false,
         imageUrl: '',
         title: ''
     });
+    const [visibleCount, setVisibleCount] = useState(6);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
-    const comunicadosPorPagina = 6;
+    const loadObserverRef = useRef<HTMLDivElement>(null);
 
 
-    const indexOfLastComunicado = currentPage * comunicadosPorPagina;
-    const indexOfFirstComunicado = indexOfLastComunicado - comunicadosPorPagina;
-    const comunicadosAtuais = comunicados.slice(indexOfFirstComunicado, indexOfLastComunicado);
-    const totalPaginas = Math.ceil(comunicados.length / comunicadosPorPagina);
+    const comunicadosVisiveis = comunicados.slice(0, visibleCount);
+    const hasMore = visibleCount < comunicados.length;
 
     const handleToggleButton = (comunicadoId: string) => {
         setEdit(edit === comunicadoId ? null : comunicadoId);
     };
 
     const handleEditComunicado = (comunicadoId: string) => {
-        console.log(`Editando comunicado: ${comunicadoId}`);
         setEdit(null); 
         navigate(`/comunicados/edit/${comunicadoId}`);
     };
 
     const handleDeleteComunicado = async (comunicadoId: string) => {
-        console.log(`Deletando comunicado: ${comunicadoId}`);
         setEdit(null); 
         
 
-        const confirmDelete = await showConfirm({
+        const confirmDelete = await confirm({
             title: 'Confirmar exclusão',
             message: 'Tem certeza que deseja deletar este comunicado? Esta ação não pode ser desfeita.',
-            confirmText: 'Deletar',
-            cancelText: 'Cancelar',
             type: 'danger'
         });
         
@@ -58,8 +55,6 @@ export function Notes() {
         }
 
         try {
-            console.log('🗑️ Iniciando deleção do comunicado:', comunicadoId);
-            
             await apiService.deleteComunicado(comunicadoId);
             
 
@@ -67,12 +62,11 @@ export function Notes() {
                 prevComunicados.filter(comunicado => comunicado.id !== comunicadoId)
             );
             
-            console.log('✅ Comunicado deletado com sucesso');
-            success('Comunicado deletado', 'Comunicado deletado com sucesso!');
+            showSuccess('Comunicado deletado com sucesso!');
             
         } catch (error: any) {
-            console.error('❌ Erro ao deletar comunicado:', error);
-            showError('Erro ao deletar', `Erro ao deletar comunicado: ${error.message || 'Erro desconhecido'}`);
+            console.error('Erro ao deletar comunicado:', error);
+            showError(`Erro ao deletar comunicado: ${error.message || 'Erro desconhecido'}`);
         }
     };
 
@@ -92,22 +86,14 @@ export function Notes() {
         });
     };
 
-    const goToPage = (pageNumber: number) => {
-        setCurrentPage(pageNumber);
-        setEdit(null); 
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    const goToPreviousPage = () => {
-        if (currentPage > 1) {
-            goToPage(currentPage - 1);
-        }
-    };
-
-    const goToNextPage = () => {
-        if (currentPage < totalPaginas) {
-            goToPage(currentPage + 1);
-        }
+    const loadMore = () => {
+        if (isLoadingMore || !hasMore) return;
+        
+        setIsLoadingMore(true);
+        setTimeout(() => {
+            setVisibleCount(prev => Math.min(prev + 6, comunicados.length));
+            setIsLoadingMore(false);
+        }, 500);
     };
 
 
@@ -132,6 +118,28 @@ export function Notes() {
             document.removeEventListener('keydown', handleEscapeKey);
         };
     }, []);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+                    loadMore();
+                }
+            },
+            { threshold: 0.1, rootMargin: '100px' }
+        );
+
+        const currentRef = loadObserverRef.current;
+        if (currentRef) {
+            observer.observe(currentRef);
+        }
+
+        return () => {
+            if (currentRef) {
+                observer.unobserve(currentRef);
+            }
+        };
+    }, [hasMore, isLoadingMore]);
 
 
     useEffect(() => {
@@ -170,13 +178,7 @@ export function Notes() {
         }
     };
 
-    useEffect(() => {
-        if (edit) {
-            console.log(`Menu aberto para comunicado: ${edit}`);
-        } else {
-            console.log('Menu fechado');
-        }
-    }, [edit]);
+
 
 
 
@@ -227,7 +229,7 @@ export function Notes() {
                                     </div>
                                 ) : (
                                     <div className="w-full flex-col justify-start items-start gap-6 flex">
-                                        {comunicadosAtuais.map((comunicado) => (
+                                        {comunicadosVisiveis.map((comunicado) => (
                                         <div
                                             key={comunicado.id}
                                             className="w-full lg:p-8 p-5 bg-gray-800 rounded-3xl border border-gray-700 flex-col justify-start items-start gap-2.5 flex"
@@ -262,7 +264,7 @@ export function Notes() {
                                                         {edit === comunicado.id && (
                                                             <div 
                                                                 ref={menuRef}
-                                                                className="absolute right-0 top-10 z-50 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden transform transition-all duration-200 ease-out scale-100 opacity-100"
+                                                                className="absolute right-0 top-10 z-[9999] bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden transform transition-all duration-200 ease-out scale-100 opacity-100"
                                                                 style={{ 
                                                                     minWidth: '180px',
                                                                     boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.1)'
@@ -337,51 +339,32 @@ export function Notes() {
                                 )}
 
 
-                                {!loading && !error && totalPaginas > 1 && (
-                                    <div className="w-full flex justify-center items-center gap-4 mt-8">
-                                        <button
-                                            onClick={goToPreviousPage}
-                                            disabled={currentPage === 1}
-                                            className="flex items-center justify-center w-10 h-10 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                        >
-                                            <FiChevronLeft className="w-5 h-5 text-gray-300" />
-                                        </button>
-
-                                        <div className="flex gap-2">
-                                            {Array.from({ length: totalPaginas }, (_, index) => {
-                                                const pageNumber = index + 1;
-                                                return (
-                                                    <button
-                                                        key={pageNumber}
-                                                        onClick={() => goToPage(pageNumber)}
-                                                        className={`w-10 h-10 rounded-lg font-medium transition-colors ${
-                                                            currentPage === pageNumber
-                                                                ? 'bg-blue-600 text-white'
-                                                                : 'bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700'
-                                                        }`}
-                                                    >
-                                                        {pageNumber}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-
-                                        <button
-                                            onClick={goToNextPage}
-                                            disabled={currentPage === totalPaginas}
-                                            className="flex items-center justify-center w-10 h-10 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                        >
-                                            <FiChevronRight className="w-5 h-5 text-gray-300" />
-                                        </button>
+                                {!loading && !error && hasMore && (
+                                    <div ref={loadObserverRef} className="w-full flex justify-center items-center py-8">
+                                        {isLoadingMore ? (
+                                            <div className="flex flex-col items-center gap-3">
+                                                <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                                <p className="text-gray-400 text-sm">Carregando mais comunicados...</p>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={loadMore}
+                                                className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-medium transition-all duration-200 border border-gray-700"
+                                            >
+                                                Carregar mais
+                                            </button>
+                                        )}
                                     </div>
                                 )}
 
 
-                                <div className="w-full flex justify-center">
-                                    <p className="text-gray-400 text-sm">
-                                        Mostrando {indexOfFirstComunicado + 1} - {Math.min(indexOfLastComunicado, comunicados.length)} de {comunicados.length} comunicados
-                                    </p>
-                                </div>
+                                {!loading && !error && comunicados.length > 0 && (
+                                    <div className="w-full flex justify-center">
+                                        <p className="text-gray-400 text-sm">
+                                            Mostrando {visibleCount} de {comunicados.length} comunicados
+                                        </p>
+                                    </div>
+                                )}
 
 
 
@@ -433,6 +416,7 @@ export function Notes() {
                     </div>
                 </div>
             )}
+            <ConfirmComponent />
         </>
     )
 }

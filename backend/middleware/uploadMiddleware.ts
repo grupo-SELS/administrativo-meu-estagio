@@ -1,12 +1,12 @@
 import multer from 'multer';
 import { Request, Response, NextFunction } from 'express';
 
-// Configuração simples do multer
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB por arquivo
-    files: 5 // máximo 5 arquivos
+    fileSize: 5 * 1024 * 1024, 
+    files: 5 
   },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
@@ -17,38 +17,61 @@ const upload = multer({
   }
 });
 
-// Middleware do multer
+
 export const uploadMiddleware = upload.array('imagens', 5);
 
-// Middleware para processar uploads e salvar localmente
+
 export const processUploads = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const files = req.files as Express.Multer.File[];
     const uploadError = req.body.uploadError;
     
-    console.log(`📤 processUploads - ${files ? files.length : 0} arquivos recebidos`);
-    
     if (uploadError) {
-      console.log(`⚠️ Upload Error detectado: ${uploadError}`);
-      // Continuar mesmo com erro, para não bloquear a criação do comunicado
+      
       req.body.imagens = [];
       return next();
     }
     
     if (!files || files.length === 0) {
-      console.log('📷 Nenhum arquivo para processar');
       req.body.imagens = [];
       return next();
     }
     
-    console.log('🔄 Processando arquivos recebidos pelo upload');
-    req.body.imagens = [`/notifications/comunicados/imagem-placeholder.jpg`]; // Placeholder
+    
+    const fs = require('fs');
+    const path = require('path');
+    const crypto = require('crypto');
+    
+    const uploadDir = path.join(__dirname, '../public/uploads');
+    
+    
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    
+    const imagePaths: string[] = [];
+    
+    for (const file of files) {
+      
+      const randomName = crypto.randomBytes(8).toString('hex');
+      const ext = path.extname(file.originalname);
+      const filename = `img_${Date.now()}_${randomName}${ext}`;
+      const filePath = path.join(uploadDir, filename);
+      
+      
+      fs.writeFileSync(filePath, file.buffer);
+      
+      
+      imagePaths.push(`/uploads/${filename}`);
+    }
+    
+    req.body.imagens = imagePaths;
     
     next();
   } catch (error: any) {
     console.error('❌ Erro no processamento de uploads:', error);
     req.body.uploadError = error.message;
     req.body.imagens = [];
-    next(); // Continuar mesmo com erro
+    next(); 
   }
 };

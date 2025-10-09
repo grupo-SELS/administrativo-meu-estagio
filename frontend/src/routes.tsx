@@ -14,6 +14,11 @@ import AlunoDetalhes from './pages/AlunoDetalhes';
 import { AlunoCreate } from './pages/AlunoCreate';
 import { PontosFaltas } from './pages/PontosFaltas';
 import AgendamentoEstagio from './pages/AgendamentoEstagio';
+import GerenciamentoProfessores from './pages/GerenciamentoProfessores';
+import { TermosCondicoes } from './pages/TermosCondicoes';
+import { PoliticaPrivacidade } from './pages/PoliticaPrivacidade';
+import { NovoAgendamento } from './pages/NovoAgendamento';
+import { ProfessorCreate } from './pages/ProfessoresCreate';
 
 export const AppRoutes = () => {
     return (
@@ -39,6 +44,11 @@ export const AppRoutes = () => {
                 <Route path='/agendamento-estagio' element={
                     <ProtectedRoute>
                         <AgendamentoEstagio />
+                    </ProtectedRoute>
+                } />
+                <Route path='/novo-agendamento' element={
+                    <ProtectedRoute>
+                        <NovoAgendamento />
                     </ProtectedRoute>
                 } />
                 <Route path='/comunicados/create' element={
@@ -77,12 +87,34 @@ export const AppRoutes = () => {
                     </ProtectedRoute>
                 }
                 />
+                <Route path='/professores' element={
+                    <ProtectedRoute>
+                        <GerenciamentoProfessores />
+                    </ProtectedRoute>
+                }
+                />
+                <Route path='/professores/create' element={
+                    <ProtectedRoute>
+                        <ProfessorCreate />
+                    </ProtectedRoute>
+                }
+                />
                 <Route path='/pontos/correcao' element={
                     <ProtectedRoute>
                         <PontosFaltas />
                     </ProtectedRoute>
                 } />
-                    
+                <Route path='/termos-condicoes' element={
+                    <ProtectedRoute>
+                        <TermosCondicoes />
+                    </ProtectedRoute>
+                } />
+                <Route path='/politica-privacidade' element={
+                    <ProtectedRoute>
+                        <PoliticaPrivacidade />
+                    </ProtectedRoute>
+                } />
+
                 <Route path="*" element={<NotFound />} />
             </Routes>
         </BrowserRouter>

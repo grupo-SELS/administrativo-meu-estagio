@@ -1,5 +1,6 @@
 import admin from 'firebase-admin';
-declare let db: any;
-declare let storage: any;
-declare let auth: any;
-export { db, storage, auth, admin };
+export declare const db: admin.firestore.Firestore;
+export declare const storage: import("firebase-admin/storage").Storage;
+export declare const auth: import("firebase-admin/auth").Auth;
+export { admin };
+//# sourceMappingURL=firebase-admin.d.ts.map

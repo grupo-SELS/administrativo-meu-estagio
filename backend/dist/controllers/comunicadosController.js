@@ -3,71 +3,133 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ComunicadosController = void 0;
 const firebase_admin_1 = require("../config/firebase-admin");
 const firestore_1 = require("firebase-admin/firestore");
-const getNotificationsCollection = () => {
-    return firebase_admin_1.db.collection('artifacts').doc('registro-itec-dcbc4').collection('public').doc('data').collection('notifications');
-};
+const APP_ID = 'registro-itec-dcbc4';
+const notificationsCollection = firebase_admin_1.db.collection(`artifacts/${APP_ID}/public/data/notifications`);
 async function createComunicadoInFirebase(dados) {
     try {
         const agora = new Date();
         const notificationData = {
-            title: dados.titulo,
-            message: dados.conteudo,
+            title: dados.title,
+            message: dados.message,
             type: 'comunicado',
             senderId: `admin-${Date.now()}`,
             createdAt: firestore_1.FieldValue.serverTimestamp(),
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
             scheduledDate: null,
-            targetPolos: dados.polo ? [dados.polo.toLowerCase().replace(/\s+/g, '')] : ['todos'],
+            targetPolos: dados.polo ? [String(dados.polo)] : ['todos'],
             targetUserTypes: ['aluno', 'professor', 'admin'],
-            autor: (!dados.polo || dados.categoria?.toLowerCase().includes('geral'))
-                ? 'Administrador Geral'
-                : `admin - ${dados.polo}`,
+            autor: dados.autor || `Admin${dados.polo ? ' - ' + dados.polo : ''}`,
             autorEmail: dados.email || '',
             categoria: dados.categoria || 'geral',
             polo: dados.polo || '',
             tags: dados.tags || [],
             imagens: dados.imagens || [],
-            status: 'ativo',
             ativo: true,
             prioridade: 'media',
             visualizacoes: 0,
             dataPublicacao: agora.toISOString(),
             imageUrl: dados.imagens && dados.imagens.length > 0 ? dados.imagens[0] : null
         };
-        console.log('📝 Criando comunicado no Firebase data/notifications:', notificationData.title);
-        const docRef = await getNotificationsCollection().add(notificationData);
-        console.log(`✅ Comunicado criado com ID: ${docRef.id}`);
+        const docRef = await notificationsCollection.add(notificationData);
         return docRef.id;
     }
     catch (error) {
-        console.error('❌ Erro ao criar comunicado no Firebase:', error);
+        console.error('[comunicadosController] Erro ao criar comunicado:', error);
+        throw error;
+    }
+}
+async function getAllComunicadosFromFirebase() {
+    try {
+        const snapshot = await notificationsCollection.get();
+        const comunicados = [];
+        snapshot.forEach((doc) => {
+            const data = doc.data();
+            const titulo = data.title || data.titulo || '';
+            const conteudo = data.message || data.conteudo || '';
+            if (titulo || conteudo) {
+                comunicados.push({
+                    id: doc.id,
+                    titulo,
+                    conteudo,
+                    autor: data.autor || data.autorEmail || data.senderId || 'Admin',
+                    email: data.autorEmail || data.email || '',
+                    polo: Array.isArray(data.targetPolos) ? data.targetPolos.join(', ') : (data.polo || ''),
+                    categoria: Array.isArray(data.targetUserTypes) ? data.targetUserTypes.join(', ') : (data.categoria || data.targetUserTypes || 'geral'),
+                    tags: data.tags || [],
+                    imagens: (() => {
+                        if (!data.imagens)
+                            return data.imageUrl ? [data.imageUrl] : [];
+                        if (Array.isArray(data.imagens))
+                            return data.imagens;
+                        if (typeof data.imagens === 'string') {
+                            return data.imagens.includes(',')
+                                ? data.imagens.split(',').map(img => img.trim()).filter(img => img)
+                                : [data.imagens];
+                        }
+                        return [];
+                    })(),
+                    prioridade: data.prioridade || 'media',
+                    visualizacoes: data.visualizacoes || 0,
+                    dataPublicacao: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate().toISOString() : (data.dataPublicacao || new Date().toISOString()),
+                    targetPolos: data.targetPolos || [],
+                    targetUserTypes: data.targetUserTypes || [],
+                    createdAt: data.createdAt,
+                    updatedAt: data.updatedAt,
+                });
+            }
+        });
+        comunicados.sort((a, b) => new Date(b.dataPublicacao).getTime() - new Date(a.dataPublicacao).getTime());
+        return comunicados;
+    }
+    catch (error) {
+        console.error('[comunicadosController] Erro ao listar comunicados:', error);
         throw error;
     }
 }
 async function getComunicadoFromFirebase(firebaseId) {
     try {
-        console.log(`🔍 Buscando comunicado: ${firebaseId}`);
-        const doc = await getNotificationsCollection().doc(firebaseId).get();
+        const doc = await notificationsCollection.doc(firebaseId).get();
         if (doc.exists) {
             const data = doc.data();
-            console.log(`✅ Comunicado encontrado: ${data?.title || 'Sem título'}`);
+            let title = '';
+            let message = data?.message || '';
+            if (data?.titleOriginal) {
+                title = data.titleOriginal;
+                message = data.messageOriginal || data.message;
+            }
+            else if (data?.message) {
+                const lines = data.message.split('\n');
+                title = lines[0] || 'Sem título';
+                message = lines.slice(2).join('\n') || data.message;
+            }
             return {
                 id: doc.id,
-                titulo: data?.title || '',
-                conteudo: data?.message || '',
-                autor: data?.autor || 'Admin',
+                title,
+                message,
+                autor: data?.autorEmail || data?.autor || data?.senderId || 'Admin',
                 polo: data?.polo || '',
                 categoria: data?.categoria || 'geral',
                 tags: data?.tags || [],
-                imagens: data?.imagens || [],
-                status: data?.status || 'ativo',
+                imagens: (() => {
+                    if (!data?.imagens)
+                        return data?.imageUrl ? [data.imageUrl] : [];
+                    if (Array.isArray(data.imagens))
+                        return data.imagens;
+                    if (typeof data.imagens === 'string') {
+                        return data.imagens.includes(',')
+                            ? data.imagens.split(',').map(img => img.trim()).filter(img => img)
+                            : [data.imagens];
+                    }
+                    return [];
+                })(),
                 ativo: data?.ativo !== false,
-                dataPublicacao: data?.dataPublicacao || new Date().toISOString(),
+                dataPublicacao: data?.createdAt ?
+                    (data.createdAt.toDate ? data.createdAt.toDate().toISOString() : data.createdAt) :
+                    new Date().toISOString(),
                 visualizacoes: data?.visualizacoes || 0,
                 ...data
             };
         }
-        console.log(`❌ Comunicado não encontrado: ${firebaseId}`);
         return null;
     }
     catch (error) {
@@ -75,106 +137,11 @@ async function getComunicadoFromFirebase(firebaseId) {
         throw error;
     }
 }
-async function getAllComunicadosFromFirebase() {
-    try {
-        console.log('📋 Listando comunicados do Firebase data/notifications...');
-        const possiblePaths = [
-            'artifacts/registro-itec-dcbc4/public/data/notifications',
-            'public/data/notifications',
-            'data/notifications',
-            'notifications'
-        ];
-        let snapshot = null;
-        let usedPath = '';
-        for (const path of possiblePaths) {
-            try {
-                console.log(`🔍 Tentando caminho: ${path}`);
-                const testSnapshot = await firebase_admin_1.db.collection(path).get();
-                if (!testSnapshot.empty) {
-                    snapshot = testSnapshot;
-                    usedPath = path;
-                    console.log(`✅ Sucesso com caminho: ${path} (${testSnapshot.size} documentos)`);
-                    break;
-                }
-                else {
-                    console.log(`❌ Vazio: ${path}`);
-                }
-            }
-            catch (error) {
-                console.log(`❌ Erro em ${path}: ${error.message}`);
-            }
-        }
-        if (!snapshot) {
-            console.log('❌ Nenhum caminho funcionou, tentando fallback...');
-            snapshot = await getNotificationsCollection().get();
-            usedPath = 'fallback';
-        }
-        const comunicados = [];
-        snapshot.forEach((doc) => {
-            const data = doc.data();
-            console.log(`📄 Documento encontrado: ${data.title || data.message || 'Sem título'} (${doc.id})`);
-            const isComunicado = data.title && data.message;
-            if (isComunicado) {
-                const comunicado = {
-                    id: doc.id,
-                    titulo: data.title || '',
-                    conteudo: data.message || '',
-                    autor: data.senderId || data.autor || 'Admin',
-                    polo: Array.isArray(data.targetPolos) ? data.targetPolos.join(', ') : (data.targetPolos || ''),
-                    categoria: Array.isArray(data.targetUserTypes) ? data.targetUserTypes.join(', ') : (data.targetUserTypes || 'geral'),
-                    tags: data.tags || [],
-                    imagens: data.imageUrl ? [data.imageUrl] : (data.imagens || []),
-                    status: 'ativo',
-                    ativo: true,
-                    dataPublicacao: data.createdAt ? new Date(data.createdAt.toDate()).toISOString() :
-                        (data.timestamp ? new Date(data.timestamp.toDate()).toISOString() : new Date().toISOString()),
-                    scheduledDate: data.scheduledDate ? new Date(data.scheduledDate.toDate()).toISOString() : null,
-                    visualizacoes: data.visualizacoes || 0,
-                    senderId: data.senderId,
-                    targetPolos: data.targetPolos || [],
-                    targetUserTypes: data.targetUserTypes || [],
-                    createdAt: data.createdAt,
-                    timestamp: data.timestamp,
-                    updatedAt: data.updatedAt
-                };
-                if (comunicado.titulo && comunicado.conteudo) {
-                    comunicados.push(comunicado);
-                    console.log(`✅ Comunicado adicionado: ${comunicado.titulo}`);
-                }
-            }
-            else {
-                console.log(`⚠️ Documento ignorado (não é comunicado): ${JSON.stringify(data, null, 2)}`);
-            }
-        });
-        comunicados.sort((a, b) => {
-            const getTime = (item) => {
-                if (item.createdAt && item.createdAt.toDate) {
-                    return item.createdAt.toDate().getTime();
-                }
-                if (item.timestamp && item.timestamp.toDate) {
-                    return item.timestamp.toDate().getTime();
-                }
-                if (item.dataPublicacao) {
-                    return new Date(item.dataPublicacao).getTime();
-                }
-                return 0;
-            };
-            return getTime(b) - getTime(a);
-        });
-        console.log(`✅ Encontrados ${comunicados.length} comunicados ativos usando caminho: ${usedPath}`);
-        return comunicados;
-    }
-    catch (error) {
-        console.error('❌ Erro ao listar comunicados:', error);
-        throw error;
-    }
-}
 async function updateComunicadoInFirebase(firebaseId, dados) {
     try {
-        console.log(`✏️ Atualizando comunicado: ${firebaseId}`);
         const updateData = {
-            title: dados.titulo,
-            message: dados.conteudo,
+            title: dados.title,
+            message: dados.message,
             autor: dados.autor,
             polo: dados.polo || '',
             categoria: dados.categoria || 'geral',
@@ -183,8 +150,7 @@ async function updateComunicadoInFirebase(firebaseId, dados) {
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
             imageUrl: dados.imagens && dados.imagens.length > 0 ? dados.imagens[0] : null
         };
-        await getNotificationsCollection().doc(firebaseId).update(updateData);
-        console.log(`✅ Comunicado atualizado: ${firebaseId}`);
+        await notificationsCollection.doc(firebaseId).update(updateData);
     }
     catch (error) {
         console.error('❌ Erro ao atualizar comunicado:', error);
@@ -193,9 +159,7 @@ async function updateComunicadoInFirebase(firebaseId, dados) {
 }
 async function deleteComunicadoFromFirebase(firebaseId) {
     try {
-        console.log(`🗑️ Deletando comunicado: ${firebaseId}`);
-        await getNotificationsCollection().doc(firebaseId).delete();
-        console.log(`✅ Comunicado deletado: ${firebaseId}`);
+        await notificationsCollection.doc(firebaseId).delete();
     }
     catch (error) {
         console.error('❌ Erro ao deletar comunicado:', error);
@@ -205,13 +169,25 @@ async function deleteComunicadoFromFirebase(firebaseId) {
 class ComunicadosController {
     async criar(req, res) {
         try {
-            console.log('📝 === CRIANDO COMUNICADO NO FIREBASE ===');
-            console.log('📝 Dados recebidos:', JSON.stringify(req.body, null, 2));
-            const { titulo, conteudo, email, polo, categoria, tags, imagens } = req.body;
-            if (!titulo || !conteudo) {
-                console.log('❌ Validação falhou: campos obrigatórios ausentes');
+            const title = req.body.title || req.body.titulo || '';
+            const message = req.body.message || req.body.conteudo || '';
+            const email = req.body.email || '';
+            const polo = req.body.polo || '';
+            const categoria = req.body.categoria || 'geral';
+            const tags = req.body.tags || [];
+            const imagens = req.body.imagens || [];
+            const prioridade = req.body.prioridade || 'media';
+            const titleTrimmed = title.toString().trim();
+            const messageTrimmed = message.toString().trim();
+            if (!titleTrimmed || !messageTrimmed) {
                 res.status(400).json({
-                    error: 'Título e conteúdo são obrigatórios'
+                    error: 'Título e conteúdo são obrigatórios',
+                    details: {
+                        titleRecebido: !!title,
+                        messageRecebido: !!message,
+                        titleVazio: !titleTrimmed,
+                        messageVazio: !messageTrimmed
+                    }
                 });
                 return;
             }
@@ -224,39 +200,33 @@ class ComunicadosController {
                     processedTags = [tags];
                 }
             }
+            if (!Array.isArray(processedTags)) {
+                processedTags = [];
+            }
             let processedImages = [];
             if (Array.isArray(imagens)) {
                 processedImages = imagens;
             }
-            else if (typeof imagens === 'string') {
+            else if (typeof imagens === 'string' && imagens) {
                 try {
                     processedImages = JSON.parse(imagens);
                 }
                 catch {
-                    processedImages = imagens ? [imagens] : [];
+                    processedImages = [imagens];
                 }
             }
-            let autor;
-            if (!polo ||
-                categoria?.toLowerCase().includes('geral') ||
-                categoria?.toLowerCase().includes('corporativo') ||
-                categoria?.toLowerCase().includes('todos')) {
-                autor = 'Administrador Geral';
-            }
-            else {
-                autor = `admin - ${polo}`;
-            }
+            const autor = polo ? `Admin - ${polo}` : 'Admin';
             const dadosComunicado = {
-                titulo: titulo.trim(),
-                conteudo: conteudo.trim(),
+                title: titleTrimmed,
+                message: messageTrimmed,
                 autor,
                 email: email || '',
                 polo: polo || '',
                 categoria: categoria || 'geral',
                 tags: processedTags,
-                imagens: processedImages
+                imagens: processedImages,
+                prioridade: prioridade || 'media'
             };
-            console.log('💾 Criando comunicado no Firebase:', dadosComunicado.titulo);
             const firebaseId = await createComunicadoInFirebase(dadosComunicado);
             res.status(201).json({
                 message: 'Comunicado criado com sucesso',
@@ -266,37 +236,31 @@ class ComunicadosController {
         }
         catch (error) {
             console.error('❌ Erro ao criar comunicado:', error);
-            res.status(500).json({ error: error.message });
+            res.status(500).json({
+                error: 'Erro ao criar comunicado',
+                message: error.message,
+                details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            });
         }
     }
     async listar(req, res) {
         try {
-            console.log('📋 === LISTANDO COMUNICADOS DO FIREBASE ===');
-            console.log('🔍 Coleção atual: data/notifications/comunicados');
-            const { polo, categoria, status, limite = 50 } = req.query;
+            const { polo, categoria, limite = 50 } = req.query;
             let comunicados = await getAllComunicadosFromFirebase();
-            console.log(`📊 Comunicados brutos encontrados: ${comunicados.length}`);
             if (polo) {
                 comunicados = comunicados.filter((c) => c.polo.toLowerCase().includes(polo.toLowerCase()));
-                console.log(`🔍 Filtrado por polo "${polo}": ${comunicados.length} comunicados`);
             }
             if (categoria) {
                 comunicados = comunicados.filter((c) => c.categoria.toLowerCase() === categoria.toLowerCase());
-                console.log(`🔍 Filtrado por categoria "${categoria}": ${comunicados.length} comunicados`);
-            }
-            if (status) {
-                comunicados = comunicados.filter((c) => c.status === status);
-                console.log(`🔍 Filtrado por status "${status}": ${comunicados.length} comunicados`);
             }
             const limiteNum = Number(limite);
             if (limiteNum > 0) {
                 comunicados = comunicados.slice(0, limiteNum);
             }
-            console.log(`✅ Retornando ${comunicados.length} comunicados`);
             res.json({
                 comunicados,
                 total: comunicados.length,
-                filtros: { polo, categoria, status, limite }
+                filtros: { polo, categoria, limite }
             });
         }
         catch (error) {
@@ -306,16 +270,12 @@ class ComunicadosController {
     }
     async buscarPorId(req, res) {
         try {
-            console.log('🔍 === BUSCANDO COMUNICADO POR ID ===');
             const { id } = req.params;
-            console.log(`📋 ID solicitado: ${id}`);
             const comunicado = await getComunicadoFromFirebase(id);
             if (!comunicado) {
-                console.log(`❌ Comunicado não encontrado: ${id}`);
                 res.status(404).json({ error: 'Comunicado não encontrado' });
                 return;
             }
-            console.log(`✅ Comunicado encontrado: ${comunicado.titulo}`);
             res.json(comunicado);
         }
         catch (error) {
@@ -325,18 +285,13 @@ class ComunicadosController {
     }
     async editar(req, res) {
         try {
-            console.log('✏️ === EDITANDO COMUNICADO NO FIREBASE ===');
             const { id } = req.params;
-            console.log(`📋 ID do comunicado: ${id}`);
-            console.log('📝 Dados recebidos:', JSON.stringify(req.body, null, 2));
-            const { titulo, conteudo, email, polo, categoria, tags, imagens, existingImages } = req.body;
+            const { title, message, email, polo, categoria, tags, imagens, existingImages } = req.body;
             const currentData = await getComunicadoFromFirebase(id);
             if (!currentData) {
-                console.log('❌ Comunicado não encontrado');
                 res.status(404).json({ error: 'Comunicado não encontrado' });
                 return;
             }
-            console.log('📄 Comunicado atual:', currentData.titulo);
             let processedTags = tags || currentData.tags || [];
             if (typeof tags === 'string') {
                 try {
@@ -359,32 +314,18 @@ class ComunicadosController {
             if (Array.isArray(imagens) && imagens.length > 0) {
                 finalImages = [...finalImages, ...imagens];
             }
-            let autor;
-            if (polo) {
-                autor = `admin - ${polo}`;
-            }
-            else {
-                const categoriaAtual = categoria || currentData.categoria || '';
-                if (!categoriaAtual || categoriaAtual.toLowerCase().includes('geral')) {
-                    autor = 'Administrador Geral';
-                }
-                else {
-                    autor = currentData.autor || 'Administrador Geral';
-                }
-            }
+            const autor = polo ? `Admin - ${polo}` : (currentData.autor || 'Admin');
             const dadosAtualizacao = {
-                titulo: titulo ? titulo.trim() : currentData.titulo,
-                conteudo: conteudo ? conteudo.trim() : currentData.conteudo,
+                title: title ? title.trim() : currentData.title,
+                message: message ? message.trim() : currentData.message,
                 autor,
                 polo: polo !== undefined ? polo : currentData.polo,
                 categoria: categoria || currentData.categoria,
                 tags: processedTags,
                 imagens: finalImages
             };
-            console.log('💾 Atualizando comunicado no Firebase:', dadosAtualizacao.titulo);
             await updateComunicadoInFirebase(id, dadosAtualizacao);
             const comunicadoAtualizado = await getComunicadoFromFirebase(id);
-            console.log('✅ Comunicado atualizado com sucesso');
             res.json({
                 message: 'Comunicado atualizado com sucesso',
                 id,
@@ -398,18 +339,13 @@ class ComunicadosController {
     }
     async deletar(req, res) {
         try {
-            console.log('🗑️ === DELETANDO COMUNICADO DO FIREBASE ===');
             const { id } = req.params;
-            console.log(`📋 ID do comunicado: ${id}`);
             const comunicadoData = await getComunicadoFromFirebase(id);
             if (!comunicadoData) {
-                console.log('❌ Comunicado não encontrado');
                 res.status(404).json({ error: 'Comunicado não encontrado' });
                 return;
             }
-            console.log(`📄 Deletando comunicado: ${comunicadoData.titulo}`);
             await deleteComunicadoFromFirebase(id);
-            console.log('✅ Comunicado deletado do Firebase');
             res.json({
                 message: 'Comunicado deletado com sucesso',
                 id
@@ -423,3 +359,4 @@ class ComunicadosController {
 }
 exports.ComunicadosController = ComunicadosController;
 exports.default = new ComunicadosController();
+//# sourceMappingURL=comunicadosController.js.map

@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import { auth } from '../config/firebase-admin';
 import { DecodedIdToken } from 'firebase-admin/auth';
 
-// Estender a interface Request para incluir user
 declare global {
   namespace Express {
     interface Request {
@@ -36,8 +35,6 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     try {
       const decodedToken = await auth.verifyIdToken(token);
       req.user = decodedToken;
-      
-      console.log(`🔐 Usuário autenticado: ${decodedToken.email || decodedToken.uid}`);
       next();
     } catch (verifyError: any) {
       console.error('Erro na verificação do token:', verifyError.code);
@@ -65,7 +62,6 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
   }
 }
 
-// Middleware para verificar se usuário é admin (opcional)
 export async function adminMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     if (!req.user) {
@@ -73,7 +69,6 @@ export async function adminMiddleware(req: Request, res: Response, next: NextFun
       return;
     }
 
-    // Verificar se usuário tem custom claims de admin
     const userRecord = await auth.getUser(req.user.uid);
     const customClaims = userRecord.customClaims;
     

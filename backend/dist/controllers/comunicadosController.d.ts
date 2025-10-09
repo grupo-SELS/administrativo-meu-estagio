@@ -8,3 +8,4 @@ export declare class ComunicadosController {
 }
 declare const _default: ComunicadosController;
 export default _default;
+//# sourceMappingURL=comunicadosController.d.ts.map

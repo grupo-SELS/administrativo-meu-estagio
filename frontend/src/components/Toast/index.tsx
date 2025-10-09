@@ -22,7 +22,7 @@ const Toast: React.FC<ToastProps> = ({ id, type, title, message, onClose }) => {
 
   const handleClose = () => {
     setIsVisible(false);
-    setTimeout(() => onClose(id), 300); // Aguardar animação de saída
+    setTimeout(() => onClose(id), 300); 
   };
 
   const getIcon = () => {

@@ -1,100 +1,202 @@
-import express from 'express';
+import express, { type Request, type Response, type NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import path from 'path';
+import './config/production';
 
 import comunicadosRoutes from './routes/comunicadosRoutes';
 import alunosRoutes from './routes/alunosRoutes';
+import professoresRoutes from './routes/professoresRoutes';
+import agendamentosRoutes from './routes/agendamentosRoutes';
+
 
 dotenv.config();
 
+
+const PORT = Number(process.env.PORT) || 3001;
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const IS_DEVELOPMENT = NODE_ENV === 'development';
+
+const ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
+  process.env.FRONTEND_URL || 'http://localhost:5173',
+];
+
+const AVAILABLE_ROUTES = [
+  'GET /health',
+  'GET /api/comunicados',
+  'GET /api/comunicados/:id',
+  'POST /api/comunicados',
+  'PUT /api/comunicados/:id',
+  'DELETE /api/comunicados/:id',
+  'GET /api/alunos',
+  'GET /api/alunos/:id',
+  'POST /api/alunos',
+  'PUT /api/alunos/:id',
+  'DELETE /api/alunos/:id',
+  'GET /api/professores',
+  'GET /api/professores/:id',
+  'POST /api/professores',
+  'PUT /api/professores/:id',
+  'DELETE /api/professores/:id',
+  'GET /api/agendamentos',
+  'GET /api/agendamentos/:id',
+  'GET /api/agendamentos/periodo',
+  'POST /api/agendamentos',
+  'PUT /api/agendamentos/:id',
+  'DELETE /api/agendamentos/:id',
+] as const;
+
+
 const app = express();
-app.use(express.json());
-const PORT = process.env.PORT || 3001;
 
+const logServerInfo = (port: number): void => {
+  console.log(`\n🚀 Servidor iniciado em http://localhost:${port}`);
+  console.log(`🌍 Ambiente: ${NODE_ENV}\n`);
+};
 
-const startServer = (port: number) => {
+interface ServerError extends Error {
+  code?: string;
+  status?: number;
+}
+
+const startServer = (port: number): void => {
   const server = app.listen(port, () => {
-    console.log('Servidor iniciado com sucesso!');
-    console.log(`URL: http://localhost:${port}`);
-    console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
-    // Checa se o Firebase Admin foi inicializado corretamente
-    let firebaseStatus = '❌ Não configurado';
-    try {
-      const { admin } = require('./config/firebase-admin');
-      if (admin && admin.apps && admin.apps.length > 0) {
-        firebaseStatus = '✅ Configurado';
-      }
-    } catch (e) {
-      firebaseStatus = '❌ Não configurado';
-    }
-    console.log(`Firebase: ${firebaseStatus}`);
-    console.log('Rotas disponíveis:');
-    console.log('   GET  /health');
-    console.log('   GET  /api/comunicados');
-    console.log('   GET  /api/comunicados/:id');
-    console.log('   POST /api/comunicados (autenticado)');
-    console.log('   PUT  /api/comunicados/:id (autenticado)');
-    console.log('   DELETE /api/comunicados/:id (autenticado)');
+    logServerInfo(port);
   });
 
-  server.on('error', (err: any) => {
+  server.on('error', (err: ServerError) => {
     if (err.code === 'EADDRINUSE') {
-      console.log(`❌ Porta ${port} já está em uso. Tentando porta ${port + 1}...`);
+      console.log(`❌ Porta ${port} em uso. Tentando porta ${port + 1}...`);
       startServer(port + 1);
     } else {
-      console.error('❌ Erro ao iniciar servidor:', err);
+      console.error('❌ Erro ao iniciar servidor:', err.message);
+      process.exit(1);
     }
   });
 };
 
 
-app.use(helmet());
-app.use(morgan('combined'));
+import { securityHeadersMiddleware, suspiciousActivityLogger, preventParameterPollution, requestTimeout, validateHostHeader } from './middleware/securityMiddleware';
+import { apiRateLimit } from './middleware/rateLimitMiddleware';
+import { auditMiddleware } from './middleware/auditMiddleware';
+import { preventSSRF } from './middleware/ssrfMiddleware';
 
 
-app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:5174', 
-    'http://localhost:5175',
-    process.env.FRONTEND_URL || 'http://localhost:5173'
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-dev-bypass']
+app.use(securityHeadersMiddleware);
+
+
+if (!IS_DEVELOPMENT) {
+  app.use(validateHostHeader(['localhost:3001', 'localhost']));
+}
+
+
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    contentSecurityPolicy: IS_DEVELOPMENT ? false : {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
+      }
+    },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true
+    }
+  })
+);
+
+
+app.use(morgan(IS_DEVELOPMENT ? 'dev' : 'combined', {
+  skip: (req) => req.url === '/health'
 }));
+
+
+app.use(suspiciousActivityLogger);
+
+
+app.use(preventParameterPollution);
+
+
+app.use(requestTimeout(30000)); 
+
+
+app.use(apiRateLimit);
+
+
+app.use(auditMiddleware);
+
+
+app.use(preventSSRF);
+
+app.use(
+  cors({
+    origin: function(origin, callback) {
+      if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-dev-bypass', 'X-Requested-With'],
+    exposedHeaders: ['Content-Length', 'X-JSON'],
+    maxAge: 86400,
+    preflightContinue: false,
+    optionsSuccessStatus: 204
+  })
+);
 
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 
-app.use('/uploads', (req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
-  next();
-}, express.static(path.join(__dirname, 'public/uploads')));
+app.use(
+  '/uploads',
+  (req: Request, res: Response, next: NextFunction) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET');
+    res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  },
+  express.static(path.join(__dirname, 'public/uploads'))
+);
 
-app.use('/test', express.static(path.join(__dirname, 'public')));
+
+if (IS_DEVELOPMENT) {
+  app.use('/test', express.static(path.join(__dirname, 'public')));
+}
 
 
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+app.get('/health', (req: Request, res: Response) => {
+  res.json({
+    ok: true,
     message: 'Sistema de Gestão de Estágios - API funcionando',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: NODE_ENV,
   });
 });
 
 
 app.use('/api', comunicadosRoutes);
 app.use('/api', alunosRoutes);
+app.use('/api', professoresRoutes);
+app.use('/api', agendamentosRoutes);
 
 
 app.use('*', (req, res) => {

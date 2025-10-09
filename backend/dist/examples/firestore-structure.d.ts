@@ -67,3 +67,4 @@ export declare const indicesFirestore: {
         field: string;
     }[];
 };
+//# sourceMappingURL=firestore-structure.d.ts.map

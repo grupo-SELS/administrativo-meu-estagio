@@ -4,11 +4,10 @@ export interface Comunicado {
   id: string;
   titulo: string;
   conteudo: string;
-  autor: string; // Campo autor gerado automaticamente
+  autor: string; 
   email?: string;
   polo?: string;
   categoria?: string;
-  status: string;
   prioridade?: string;
   dataPublicacao: Timestamp | FieldValue;
   dataVencimento?: Timestamp;
@@ -26,7 +25,6 @@ export interface CreateComunicadoDTO {
   email?: string;
   polo?: string;
   categoria?: string;
-  status?: string;
   prioridade?: string;
   dataVencimento?: string;
   tags?: string[];
@@ -38,7 +36,6 @@ export interface UpdateComunicadoDTO {
   email?: string;
   polo?: string;
   categoria?: string;
-  status?: string;
   prioridade?: string;
   dataVencimento?: string;
   tags?: string[];
@@ -47,7 +44,6 @@ export interface UpdateComunicadoDTO {
 export interface ComunicadoFilters {
   polo?: string;
   categoria?: string;
-  status?: string;
   prioridade?: string;
   limite?: number;
 }

@@ -17,12 +17,7 @@ interface Student {
     supervisor?: string;
 }
 
-const mockStudents: Student[] = [
-    { id: 1, name: 'Maxley Lima', matricula: '2021001', localEstagio: 'Hospital São João Batista', professorOrientador: 'Dr. Ana Clara Silva', faltasEstagio: 2, statusMatricula: 'Bloqueado', polo: 'Volta Redonda', email: 'maxley.lima@example.com', telefone: '(24) 99999-9999', turma: '3A', supervisor: 'Enf. Carlos Silva' },
-    { id: 2, name: 'Ana Silva', matricula: '2021002', localEstagio: 'UBS Centro - Resende', professorOrientador: 'Dr. Carlos Mendes', faltasEstagio: 0, statusMatricula: 'Ativo', polo: 'Resende', email: 'ana.silva@example.com', telefone: '(24) 98888-8888', turma: '3B', supervisor: 'Enf. Maria Santos' },
-    { id: 3, name: 'Carlos Oliveira', matricula: '2021003', localEstagio: 'Hospital da Marinha', professorOrientador: 'Dra. Maria Santos', faltasEstagio: 5, statusMatricula: 'Bloqueado', polo: 'Angra dos Reis', email: 'carlos.oliveira@example.com', telefone: '(24) 97777-7777', turma: '3A', supervisor: 'Enf. João Costa' },
-    { id: 4, name: 'Maria Santos', matricula: '2021004', localEstagio: 'CSU Vila Mury', professorOrientador: 'Dr. José Ferreira', faltasEstagio: 1, statusMatricula: 'Ativo', polo: 'Volta Redonda', email: 'maria.santos@example.com', telefone: '(24) 96666-6666', turma: '3C', supervisor: 'Enf. Ana Costa' },
-];
+const mockStudents: Student[] = [];
 
 export default function AlunoDetalhes() {
     const { id } = useParams<{ id: string }>();

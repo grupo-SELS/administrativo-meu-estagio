@@ -4,6 +4,49 @@ import { apiService, type Comunicado } from '../../services/apiService';
 import AlertsSection from '../../components/AlertsSection';
 import { useState, useEffect } from 'react';
 
+
+const ComunicadoImagem = ({ imagem, index, titulo }: { imagem: string; index: number; titulo: string }) => {
+  const [imageError, setImageError] = useState(false);
+
+
+  if (!imagem || typeof imagem !== 'string') {
+    return (
+      <div className="relative overflow-hidden rounded-lg aspect-video bg-gray-700" style={{ minHeight: '150px' }}>
+        <div className="w-full h-full flex flex-col items-center justify-center bg-red-900/30 border border-red-700">
+          <svg className="w-8 h-8 text-red-400 mb-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span className="text-xs text-red-300">URL inválida</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className="relative overflow-hidden rounded-lg aspect-video bg-gray-700"
+      style={{ minHeight: '150px' }}
+    >
+      {imageError ? (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-red-900/30 border border-red-700">
+          <svg className="w-8 h-8 text-red-400 mb-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span className="text-xs text-red-300">Falha ao carregar</span>
+        </div>
+      ) : (
+        <img
+          src={imagem}
+          alt={`Imagem ${index + 1} - ${titulo}`}
+          className="w-full h-full object-cover"
+          loading="lazy"
+          onError={() => setImageError(true)}
+        />
+      )}
+    </div>
+  );
+};
+
 const Dashboard = () => {
   const [comunicados, setComunicados] = useState<Comunicado[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,28 +60,24 @@ const Dashboard = () => {
     expiringContracts: 0,
   };
 
-  // Carregar comunicados da API
+
   useEffect(() => {
     const fetchComunicados = async () => {
       try {
-        console.log('🔄 Dashboard: Iniciando carregamento de comunicados...');
         setLoading(true);
-        const response = await apiService.getComunicados({ limite: 3 });
-        console.log('📊 Dashboard: Resposta da API recebida:', response);
-        console.log('📋 Dashboard: Comunicados recebidos:', response.comunicados);
-        console.log('📊 Dashboard: Total de comunicados:', response.comunicados?.length || 0);
-        
-        setComunicados(response.comunicados);
         setError(null);
-        console.log('✅ Dashboard: Estado atualizado com sucesso');
-      } catch (err) {
-        console.error('❌ Dashboard: Erro ao carregar comunicados:', err);
-        setError('Erro ao carregar comunicados. Tente novamente mais tarde.');
-        // Fallback para dados mock em caso de erro
+        
+        const response = await apiService.getComunicados({ limite: 3 });
+        setComunicados(response.comunicados || []);
+      } catch (err: any) {
+        if (err?.message === 'BACKEND_OFFLINE') {
+          setError('Servidor backend não está disponível. Inicie o servidor com: npm run dev');
+        } else {
+          setError('Erro ao conectar com o servidor. Verifique sua conexão.');
+        }
         setComunicados([]);
       } finally {
         setLoading(false);
-        console.log('🏁 Dashboard: Carregamento finalizado');
       }
     };
 
@@ -60,8 +99,20 @@ const Dashboard = () => {
 
 
         {error && (
-          <div className="mx-4 sm:mx-6 lg:mx-8 mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
+          <div className="mx-4 sm:mx-6 lg:mx-8 mb-4 p-4 bg-yellow-900/30 border border-yellow-700 rounded-lg">
+            <div className="flex items-start gap-3">
+              <svg className="w-6 h-6 text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div className="flex-1">
+                <h3 className="text-yellow-400 font-semibold mb-1">Servidor Backend Offline</h3>
+                <p className="text-yellow-300 text-sm mb-2">{error}</p>
+                <div className="bg-gray-800 rounded p-3 text-xs font-mono text-gray-300">
+                  <p className="mb-1">📁 cd backend</p>
+                  <p>▶️ npm run dev</p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -76,10 +127,8 @@ const Dashboard = () => {
                 <p className="text-gray-500 dark:text-gray-400">Nenhum comunicado encontrado.</p>
               </div>
             ) : (
-              comunicados.map((comunicado) => {
-                console.log('🎨 Dashboard: Renderizando comunicado:', comunicado.titulo);
-                return (
-                  <div key={comunicado.id} className="max-w-sm flex-1 min-w-[300px]">
+              comunicados.map((comunicado) => (
+                <div key={comunicado.id} className="max-w-sm flex-1 min-w-[300px]">
                     <div className="h-full p-6 bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 flex flex-col">
 
                       <div className="flex items-center space-x-3 mb-4">
@@ -112,40 +161,14 @@ const Dashboard = () => {
                         ? 'grid-cols-2' 
                         : 'grid-cols-3'
                     }`}>
-                      {comunicado.imagens.slice(0, 3).map((imagem, index) => {
-                        console.log(`🖼️ DEBUG - URL da imagem ${index + 1}:`, imagem);
-                        return (
-                          <div 
-                            key={index} 
-                            className="relative overflow-hidden rounded-lg aspect-video bg-gray-200 dark:bg-gray-700"
-                            style={{ minHeight: '150px', backgroundColor: '#f3f4f6' }}
-                          >
-                            <img
-                              src={imagem}
-                              alt={`Imagem ${index + 1} - ${comunicado.titulo}`}
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                              style={{ 
-                                width: '100%', 
-                                height: '100%', 
-                                objectFit: 'cover',
-                                display: 'block',
-                                maxWidth: '100%'
-                              }}
-                              onError={(e) => {
-                                console.error(`❌ Erro ao carregar imagem ${index + 1}:`, imagem, e);
-                                const target = e.target as HTMLImageElement;
-                                target.style.backgroundColor = '#ef4444';
-                                target.style.color = '#fff';
-                                target.innerHTML = 'Erro ao carregar';
-                              }}
-                              onLoad={() => {
-                                console.log(`✅ Imagem ${index + 1} carregada com sucesso:`, imagem);
-                              }}
-                            />
-                          </div>
-                        );
-                      })}
+                      {comunicado.imagens.slice(0, 3).map((imagem, index) => (
+                        <ComunicadoImagem 
+                          key={index}
+                          imagem={imagem}
+                          index={index}
+                          titulo={comunicado.titulo}
+                        />
+                      ))}
                     </div>
                     {comunicado.imagens.length > 3 && (
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -155,7 +178,7 @@ const Dashboard = () => {
                   </div>
                 )}
 
-                {/* Polo e Categoria */}
+                
                 <div className="mt-auto pt-4 border-t border-gray-200 dark:border-gray-600">
                   <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                     {comunicado.polo && <span>{comunicado.polo}</span>}
@@ -164,8 +187,7 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
-                );
-              })
+              ))
             )}
           </div>
         )}

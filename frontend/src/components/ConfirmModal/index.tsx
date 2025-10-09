@@ -68,7 +68,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      {/* Backdrop */}
+      
       <div 
         className={`
           fixed inset-0 bg-black transition-opacity duration-300
@@ -77,7 +77,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
         onClick={handleCancel}
       />
       
-      {/* Modal */}
+      
       <div className="flex min-h-screen items-center justify-center p-4">
         <div
           className={`
@@ -86,7 +86,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
             bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-auto
           `}
         >
-          {/* Header */}
+          
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
@@ -106,14 +106,14 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
             </div>
           </div>
 
-          {/* Content */}
+          
           <div className="px-6 py-4">
             <p className="text-sm text-gray-600 dark:text-gray-300">
               {message}
             </p>
           </div>
 
-          {/* Footer */}
+          
           <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
             <button
               onClick={handleCancel}
