@@ -5,7 +5,7 @@ import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { useState, useEffect } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
-import { apiService } from '../services/apiService';
+import apiService from '../services/apiService';
 import { Link } from 'react-router-dom';
 
 
@@ -104,7 +104,7 @@ function GerenciamentoProfessores() {
         });
         async function fetchProfessors() {
             try {
-                const response = await apiService.get(`/api/professores`);
+                const response = await apiService.get(`/professores`);
                 if (response !== undefined && response !== null && typeof response === 'object' && 'professores' in response && Array.isArray((response as any).professores)) {
                     let professors = (response as { professores: Student[] }).professores;
                     let professorsFiltrados = professors.filter((aluno: Student) => aluno.type === 'professor');
@@ -175,7 +175,7 @@ function GerenciamentoProfessores() {
         const deletionResults: { id: string; success: boolean }[] = [];
         for (const id of Array.from(selectedProfessorsIds)) {
             try {
-                await apiService.delete(`/api/professors/${id}`);
+                await apiService.deleteProfessor(id);
                 deletionResults.push({ id, success: true });
             } catch (error) {
                 console.error(`Erro ao deletar professor ${id}:`, error);

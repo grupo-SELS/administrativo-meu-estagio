@@ -68,7 +68,7 @@ exports.apiRateLimit = rateLimit({
 });
 exports.strictRateLimit = rateLimit({
     windowMs: 60 * 1000,
-    max: 10,
+    max: 30,
     message: 'Limite de requisições excedido. Aguarde 1 minuto.'
 });
 //# sourceMappingURL=rateLimitMiddleware.js.map

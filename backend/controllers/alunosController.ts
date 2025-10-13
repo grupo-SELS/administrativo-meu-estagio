@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { db } from '../config/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { processarCPF, cpfJaExiste, maskCPFForLogs, registrarAuditoriaCPF } from '../utils/cpfUtils';
 
 
 const APP_ID = 'registro-itec-dcbc4';
@@ -93,7 +94,7 @@ async function getAlunoFromFirebase(firebaseId: string): Promise<any | null> {
 
 async function updateAlunoInFirebase(firebaseId: string, dados: any): Promise<void> {
   try {
-    const updateData = {
+    const updateData: any = {
       nome: dados.nome,
       matricula: dados.matricula,
       polo: dados.polo || '',
@@ -103,6 +104,19 @@ async function updateAlunoInFirebase(firebaseId: string, dados: any): Promise<vo
       updatedAt: FieldValue.serverTimestamp(),
       imageUrl: dados.imagens && dados.imagens.length > 0 ? dados.imagens[0] : null
     };
+
+    // Adiciona CPF se fornecido (já validado anteriormente)
+    if (dados.cpf !== undefined) {
+      updateData.cpf = dados.cpf;
+    }
+
+    // Adiciona outros campos se fornecidos
+    if (dados.email !== undefined) updateData.email = dados.email;
+    if (dados.localEstagio !== undefined) updateData.localEstagio = dados.localEstagio;
+    if (dados.professorOrientador !== undefined) updateData.professorOrientador = dados.professorOrientador;
+    if (dados.statusMatricula !== undefined) updateData.statusMatricula = dados.statusMatricula;
+    if (dados.turma !== undefined) updateData.turma = dados.turma;
+    if (dados.telefone !== undefined) updateData.telefone = dados.telefone;
 
     await usersCollection.doc(firebaseId).update(updateData);
   } catch (error: any) {
@@ -145,9 +159,29 @@ export class alunosController {
         return;
       }
 
+      // Validação de CPF
+      const resultadoCPF = processarCPF(cpfTrimmed);
+      if (!resultadoCPF.valido) {
+        console.warn(`[alunosController] Tentativa de criar aluno com CPF inválido: ${maskCPFForLogs(cpfTrimmed)}`);
+        res.status(400).json({
+          error: resultadoCPF.erro || 'CPF inválido'
+        });
+        return;
+      }
+
+      // Verifica se CPF já existe
+      const cpfExistente = await cpfJaExiste(db, resultadoCPF.cpfSanitizado, 'alunos');
+      if (cpfExistente) {
+        console.warn(`[alunosController] Tentativa de criar aluno com CPF duplicado: ${maskCPFForLogs(resultadoCPF.cpfSanitizado)}`);
+        res.status(409).json({
+          error: 'CPF já cadastrado no sistema'
+        });
+        return;
+      }
+
       const dadosAluno = {
         nome: nomeTrimmed,
-        cpf: cpfTrimmed,
+        cpf: resultadoCPF.cpfSanitizado, // CPF sanitizado (apenas números)
         email: emailTrimmed,
         polo: polo || '',
         localEstagio: localEstagio || '',
@@ -158,6 +192,18 @@ export class alunosController {
       };
 
       const firebaseId = await createAlunoInFirebase(dadosAluno);
+
+      // Log de auditoria LGPD
+      registrarAuditoriaCPF({
+        timestamp: new Date(),
+        operation: 'CREATE',
+        userId: (req as any).user?.uid || 'unknown',
+        collection: 'alunos',
+        recordId: firebaseId,
+        cpfMasked: maskCPFForLogs(resultadoCPF.cpfSanitizado),
+        ip: req.ip,
+        userAgent: req.get('user-agent')
+      });
 
       res.status(201).json({
         message: 'Aluno criado com sucesso',
@@ -232,13 +278,50 @@ export class alunosController {
   async editar(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { nome, matricula, email, polo, categoria, tags, imagens, existingImages } = req.body;
+      const { nome, cpf, matricula, email, polo, categoria, tags, imagens, existingImages, localEstagio, professorOrientador, statusMatricula, turma, telefone } = req.body;
 
       const currentData = await getAlunoFromFirebase(id);
 
       if (!currentData) {
         res.status(404).json({ error: 'aluno não encontrado' });
         return;
+      }
+
+      // Validação de CPF se fornecido e diferente do atual
+      let cpfSanitizado = currentData.cpf;
+      if (cpf && cpf !== currentData.cpf) {
+        const resultadoCPF = processarCPF(cpf);
+        if (!resultadoCPF.valido) {
+          console.warn(`[alunosController] Tentativa de atualizar aluno com CPF inválido: ${maskCPFForLogs(cpf)}`);
+          res.status(400).json({
+            error: resultadoCPF.erro || 'CPF inválido'
+          });
+          return;
+        }
+
+        // Verifica se CPF já existe em outro aluno
+        const cpfExistente = await cpfJaExiste(db, resultadoCPF.cpfSanitizado, 'alunos', id);
+        if (cpfExistente) {
+          console.warn(`[alunosController] Tentativa de atualizar aluno com CPF duplicado: ${maskCPFForLogs(resultadoCPF.cpfSanitizado)}`);
+          res.status(409).json({
+            error: 'CPF já cadastrado em outro aluno'
+          });
+          return;
+        }
+
+        cpfSanitizado = resultadoCPF.cpfSanitizado;
+
+        // Log de auditoria LGPD
+        registrarAuditoriaCPF({
+          timestamp: new Date(),
+          operation: 'UPDATE',
+          userId: (req as any).user?.uid || 'unknown',
+          collection: 'alunos',
+          recordId: id,
+          cpfMasked: maskCPFForLogs(resultadoCPF.cpfSanitizado),
+          ip: req.ip,
+          userAgent: req.get('user-agent')
+        });
       }
 
       let processedTags = tags || currentData.tags || [];
@@ -267,11 +350,18 @@ export class alunosController {
 
       const dadosAtualizacao = {
         nome: nome ? nome.trim() : currentData.nome,
+        cpf: cpfSanitizado,
         matricula: matricula ? matricula.trim() : currentData.matricula,
+        email: email !== undefined ? email : currentData.email,
         polo: polo !== undefined ? polo : currentData.polo,
         categoria: categoria || currentData.categoria,
         tags: processedTags,
-        imagens: finalImages
+        imagens: finalImages,
+        localEstagio: localEstagio !== undefined ? localEstagio : currentData.localEstagio,
+        professorOrientador: professorOrientador !== undefined ? professorOrientador : currentData.professorOrientador,
+        statusMatricula: statusMatricula !== undefined ? statusMatricula : currentData.statusMatricula,
+        turma: turma !== undefined ? turma : currentData.turma,
+        telefone: telefone !== undefined ? telefone : currentData.telefone
       };
 
       await updateAlunoInFirebase(id, dadosAtualizacao);

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { CompanyLogo } from '../CompanyLogo';
-import { apiService, type Comunicado } from '../../services/apiService';
+import apiService, { type Comunicado } from '../../services/apiService';
 import AlertsSection from '../../components/AlertsSection';
 import { useState, useEffect } from 'react';
 
@@ -36,7 +36,7 @@ const ComunicadoImagem = ({ imagem, index, titulo }: { imagem: string; index: nu
         </div>
       ) : (
         <img
-          src={imagem}
+          src={apiService.getImageUrl(imagem)}
           alt={`Imagem ${index + 1} - ${titulo}`}
           className="w-full h-full object-cover"
           loading="lazy"
@@ -68,7 +68,10 @@ const Dashboard = () => {
         setError(null);
         
         const response = await apiService.getComunicados({ limite: 3 });
-        setComunicados(response.comunicados || []);
+        const comunicadosData = Array.isArray(response.comunicados) 
+          ? response.comunicados 
+          : [];
+        setComunicados(comunicadosData);
       } catch (err: any) {
         if (err?.message === 'BACKEND_OFFLINE') {
           setError('Servidor backend não está disponível. Inicie o servidor com: npm run dev');
@@ -136,7 +139,7 @@ const Dashboard = () => {
                         <div>
                           <p className="text-sm font-medium text-gray-900 dark:text-white">{comunicado.autor}</p>
                           <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
-                            {new Date(comunicado.dataPublicacao).toLocaleDateString('pt-BR')}
+                            {comunicado.dataPublicacao ? new Date(comunicado.dataPublicacao).toLocaleDateString('pt-BR') : 'Data não disponível'}
                           </div>
                         </div>
                       </div>

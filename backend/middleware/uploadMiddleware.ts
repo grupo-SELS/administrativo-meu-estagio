@@ -42,7 +42,10 @@ export const processUploads = async (req: Request, res: Response, next: NextFunc
     const path = require('path');
     const crypto = require('crypto');
     
-    const uploadDir = path.join(__dirname, '../public/uploads');
+    // Se estiver rodando do dist, vai para ../../public/uploads, senão ../public/uploads
+    const uploadDir = __dirname.includes('dist') 
+      ? path.join(__dirname, '../../public/uploads')
+      : path.join(__dirname, '../public/uploads');
     
     
     if (!fs.existsSync(uploadDir)) {

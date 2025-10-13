@@ -24,11 +24,13 @@ const faltasDetalhadas: Record<number, FaltaDetalhada[]> = {
 import { Header } from "../components/Header";
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { apiService } from '../services/apiService';
+import apiService from '../services/apiService';
+import { CPFInput } from '../components/CPFInput';
 
 interface Student {
     id: number;
     name: string;
+    cpf: string;
     matricula: string;
     localEstagio: string;
     professorOrientador: string;
@@ -50,6 +52,7 @@ export default function AlunoEdit() {
     const [formData, setFormData] = useState<Student>({
         id: 0,
         name: '',
+        cpf: '',
         matricula: '',
         localEstagio: '',
         professorOrientador: '',
@@ -67,11 +70,12 @@ export default function AlunoEdit() {
             if (id) {
                 setIsLoading(true);
                 try {
-                    const aluno = await apiService.get<any>(`/api/alunos/${id}`);
+                    const aluno = await apiService.get<any>(`/alunos/${id}`);
                     if (aluno && aluno.id) {
                         setFormData({
                             id: aluno.id,
                             name: aluno.nome || '',
+                            cpf: aluno.cpf || '',
                             matricula: aluno.matricula || '',
                             localEstagio: aluno.localEstagio || '',
                             professorOrientador: aluno.professorOrientador || '',
@@ -104,16 +108,37 @@ export default function AlunoEdit() {
         }));
     };
 
+    const handleCPFChange = (value: string) => {
+        setFormData(prev => ({
+            ...prev,
+            cpf: value
+        }));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
 
         try {
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            const alunoData = {
+                nome: formData.name,
+                cpf: formData.cpf,
+                email: formData.email,
+                matricula: formData.matricula,
+                polo: formData.polo,
+                localEstagio: formData.localEstagio,
+                professorOrientador: formData.professorOrientador,
+                statusMatricula: formData.statusMatricula,
+                turma: formData.turma,
+                telefone: formData.telefone
+            };
+
+            await apiService.updateAluno(id!, alunoData);
+            alert('Aluno atualizado com sucesso!');
             navigate('/alunos');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Erro ao salvar:', error);
-            alert('Erro ao salvar as informações do aluno');
+            alert(`Erro ao salvar: ${error.message || 'Erro desconhecido'}`);
         } finally {
             setIsLoading(false);
         }
@@ -168,6 +193,15 @@ export default function AlunoEdit() {
                                     onChange={handleInputChange}
                                     required
                                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+
+                            <div>
+                                <CPFInput
+                                    value={formData.cpf}
+                                    onChange={handleCPFChange}
+                                    label="CPF"
+                                    required={true}
                                 />
                             </div>
 

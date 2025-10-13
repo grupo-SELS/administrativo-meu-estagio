@@ -36,7 +36,9 @@ const processUploads = async (req, res, next) => {
         const fs = require('fs');
         const path = require('path');
         const crypto = require('crypto');
-        const uploadDir = path.join(__dirname, '../public/uploads');
+        const uploadDir = __dirname.includes('dist')
+            ? path.join(__dirname, '../../public/uploads')
+            : path.join(__dirname, '../public/uploads');
         if (!fs.existsSync(uploadDir)) {
             fs.mkdirSync(uploadDir, { recursive: true });
         }

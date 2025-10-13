@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { apiService } from '../../services/apiService';
+import ApiService from '../../services/apiService';
 
 const ApiTester = () => {
   const [testResult, setTestResult] = useState<any>(null);
@@ -10,13 +10,10 @@ const ApiTester = () => {
     setLoading(true);
     setError(null);
     try {
-      const healthResult = await apiService.healthCheck();
-      
-      const firestoreResult = await apiService.testFirestore();
+      const healthResult = await ApiService.healthCheck();
       
       setTestResult({
-        health: healthResult,
-        firestore: firestoreResult
+        health: healthResult
       });
     } catch (err: any) {
       setError(err.message);
@@ -29,7 +26,7 @@ const ApiTester = () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await apiService.getComunicados({ limite: 5 });
+      const result = await ApiService.getComunicados({ limite: 5 });
       setTestResult({ comunicados: result });
     } catch (err: any) {
       setError(err.message);

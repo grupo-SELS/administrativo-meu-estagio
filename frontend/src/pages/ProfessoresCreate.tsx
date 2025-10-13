@@ -9,6 +9,7 @@ const API_BASE_URL = 'http://localhost:3001';
 interface Professor {
     id: number;
     name: string;
+    cpf?: string;
     localEstagio: string;
     polo: 'Volta Redonda' | 'Resende' | 'Angra dos Reis';
     email?: string;
@@ -22,6 +23,7 @@ export const ProfessorCreate = () => {
     const [formData, setFormData] = useState<Professor>({
         id: 0,
         name: '',
+        cpf: '',
         localEstagio: '',
         polo: 'Volta Redonda',
         email: ''
@@ -52,6 +54,7 @@ export const ProfessorCreate = () => {
 
             const bodyData = {
                 nome: formData.name,
+                cpf: formData.cpf,
                 email: formData.email,
                 polo: formData.polo,
                 localEstagio: formData.localEstagio
@@ -60,7 +63,7 @@ export const ProfessorCreate = () => {
             console.log('📤 Enviando dados do professor:', bodyData);
             console.log('🔑 Token obtido, comprimento:', token.length);
 
-            const response = await fetch(`${API_BASE_URL}/api/professors`, {
+            const response = await fetch(`${API_BASE_URL}/api/professores`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -145,6 +148,39 @@ export const ProfessorCreate = () => {
                                     value={formData.name}
                                     onChange={handleInputChange}
                                     required
+                                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="cpf" className="block text-sm font-medium text-gray-300 mb-2">
+                                    CPF
+                                </label>
+                                <input
+                                    type="text"
+                                    id="cpf"
+                                    name="cpf"
+                                    value={formData.cpf || ''}
+                                    onChange={(e) => {
+                                        // Remove caracteres não numéricos
+                                        const valor = e.target.value.replace(/\D/g, '');
+                                        let cpfFormatado = valor;
+                                        
+                                        // Formata: XXX.XXX.XXX-XX
+                                        if (valor.length > 3) {
+                                            cpfFormatado = valor.substring(0, 3) + '.' + valor.substring(3);
+                                        }
+                                        if (valor.length > 6) {
+                                            cpfFormatado = valor.substring(0, 3) + '.' + valor.substring(3, 6) + '.' + valor.substring(6);
+                                        }
+                                        if (valor.length > 9) {
+                                            cpfFormatado = valor.substring(0, 3) + '.' + valor.substring(3, 6) + '.' + valor.substring(6, 9) + '-' + valor.substring(9, 11);
+                                        }
+                                        
+                                        setFormData(prev => ({ ...prev, cpf: cpfFormatado }));
+                                    }}
+                                    placeholder="000.000.000-00"
+                                    maxLength={14}
                                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>

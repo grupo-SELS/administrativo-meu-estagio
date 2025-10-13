@@ -2,10 +2,12 @@ import { Header } from "../components/Header";
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
+import { CPFInput } from '../components/CPFInput';
 
 interface Student {
     id: number;
     name: string;
+    cpf: string;
     matricula: string;
     localEstagio: string;
     professorOrientador: string;
@@ -26,6 +28,7 @@ export const AlunoCreate = () => {
     const [formData, setFormData] = useState<Student>({
         id: 0,
         name: '',
+        cpf: '',
         matricula: '',
         localEstagio: '',
         professorOrientador: '',
@@ -47,6 +50,13 @@ export const AlunoCreate = () => {
         }));
     };
 
+    const handleCPFChange = (value: string) => {
+        setFormData(prev => ({
+            ...prev,
+            cpf: value
+        }));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
@@ -56,7 +66,7 @@ export const AlunoCreate = () => {
             
             const alunoData = {
                 nome: formData.name,
-                cpf: formData.matricula, // Usando matrícula como CPF temporariamente
+                cpf: formData.cpf,
                 email: formData.email || `${formData.matricula}@aluno.com`,
                 polo: formData.polo,
                 localEstagio: formData.localEstagio,
@@ -143,6 +153,15 @@ export const AlunoCreate = () => {
                                     onChange={handleInputChange}
                                     required
                                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+
+                            <div>
+                                <CPFInput
+                                    value={formData.cpf}
+                                    onChange={handleCPFChange}
+                                    label="CPF"
+                                    required={true}
                                 />
                             </div>
 

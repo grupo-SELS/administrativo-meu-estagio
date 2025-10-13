@@ -3,12 +3,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.professoresController = void 0;
 const firebase_admin_1 = require("../config/firebase-admin");
 const firestore_1 = require("firebase-admin/firestore");
+const cpfUtils_1 = require("../utils/cpfUtils");
 const APP_ID = 'registro-itec-dcbc4';
 const usersCollection = firebase_admin_1.db.collection(`artifacts/${APP_ID}/users`);
 async function createProfessorInFirebase(dados) {
     try {
         const professorData = {
             nome: dados.nome,
+            cpf: dados.cpf,
             type: 'professor',
             localEstagio: dados.localEstagio || '',
             createdAt: firestore_1.FieldValue.serverTimestamp(),
@@ -71,10 +73,18 @@ async function uptadeProfessorInFirebase(firebaseId, dados) {
     try {
         const updateData = {
             nome: dados.nome,
-            matricula: dados.matricula,
             polo: dados.polo || '',
             updatedAt: firestore_1.FieldValue.serverTimestamp()
         };
+        if (dados.cpf !== undefined) {
+            updateData.cpf = dados.cpf;
+        }
+        if (dados.email !== undefined)
+            updateData.email = dados.email;
+        if (dados.localEstagio !== undefined)
+            updateData.localEstagio = dados.localEstagio;
+        if (dados.matricula !== undefined)
+            updateData.matricula = dados.matricula;
         await usersCollection.doc(firebaseId).update(updateData);
     }
     catch (error) {
@@ -94,7 +104,7 @@ async function deleteProfessorFromFirebase(firebaseId) {
 class professoresController {
     async criar(req, res) {
         try {
-            const { nome, email, polo, localEstagio } = req.body;
+            const { nome, cpf, email, polo, localEstagio } = req.body;
             if (!nome || nome.trim() === '') {
                 res.status(400).json({
                     error: 'Nome é obrigatório'
@@ -102,13 +112,47 @@ class professoresController {
                 return;
             }
             const nomeTrimmed = nome.toString().trim();
+            const cpfTrimmed = cpf?.toString().trim();
+            if (!cpfTrimmed) {
+                res.status(400).json({
+                    error: 'CPF é obrigatório'
+                });
+                return;
+            }
+            const resultadoCPF = (0, cpfUtils_1.processarCPF)(cpfTrimmed);
+            if (!resultadoCPF.valido) {
+                console.warn(`[professoresController] Tentativa de criar professor com CPF inválido: ${(0, cpfUtils_1.maskCPFForLogs)(cpfTrimmed)}`);
+                res.status(400).json({
+                    error: resultadoCPF.erro || 'CPF inválido'
+                });
+                return;
+            }
+            const cpfExistente = await (0, cpfUtils_1.cpfJaExiste)(firebase_admin_1.db, resultadoCPF.cpfSanitizado, 'professores');
+            if (cpfExistente) {
+                console.warn(`[professoresController] Tentativa de criar professor com CPF duplicado: ${(0, cpfUtils_1.maskCPFForLogs)(resultadoCPF.cpfSanitizado)}`);
+                res.status(409).json({
+                    error: 'CPF já cadastrado no sistema'
+                });
+                return;
+            }
             const dadosProfessor = {
                 nome: nomeTrimmed,
+                cpf: resultadoCPF.cpfSanitizado,
                 email: email || '',
                 polo: polo || '',
                 localEstagio: localEstagio || ''
             };
             const firebaseId = await createProfessorInFirebase(dadosProfessor);
+            (0, cpfUtils_1.registrarAuditoriaCPF)({
+                timestamp: new Date(),
+                operation: 'CREATE',
+                userId: req.user?.uid || 'unknown',
+                collection: 'professores',
+                recordId: firebaseId,
+                cpfMasked: (0, cpfUtils_1.maskCPFForLogs)(resultadoCPF.cpfSanitizado),
+                ip: req.ip,
+                userAgent: req.get('user-agent')
+            });
             res.status(201).json({
                 message: 'Professor criado com sucesso',
                 id: firebaseId,
@@ -169,11 +213,41 @@ class professoresController {
     async editar(req, res) {
         try {
             const { id } = req.params;
-            const { nome, matricula, email, polo, categoria, tags, imagens, existingImages } = req.body;
+            const { nome, cpf, matricula, email, polo, localEstagio, categoria, tags, imagens, existingImages } = req.body;
             const currentData = await getProfessorFromFirebase(id);
             if (!currentData) {
                 res.status(404).json({ error: 'professor não encontrado' });
                 return;
+            }
+            let cpfSanitizado = currentData.cpf;
+            if (cpf && cpf !== currentData.cpf) {
+                const resultadoCPF = (0, cpfUtils_1.processarCPF)(cpf);
+                if (!resultadoCPF.valido) {
+                    console.warn(`[professoresController] Tentativa de atualizar professor com CPF inválido: ${(0, cpfUtils_1.maskCPFForLogs)(cpf)}`);
+                    res.status(400).json({
+                        error: resultadoCPF.erro || 'CPF inválido'
+                    });
+                    return;
+                }
+                const cpfExistente = await (0, cpfUtils_1.cpfJaExiste)(firebase_admin_1.db, resultadoCPF.cpfSanitizado, 'professores', id);
+                if (cpfExistente) {
+                    console.warn(`[professoresController] Tentativa de atualizar professor com CPF duplicado: ${(0, cpfUtils_1.maskCPFForLogs)(resultadoCPF.cpfSanitizado)}`);
+                    res.status(409).json({
+                        error: 'CPF já cadastrado em outro professor'
+                    });
+                    return;
+                }
+                cpfSanitizado = resultadoCPF.cpfSanitizado;
+                (0, cpfUtils_1.registrarAuditoriaCPF)({
+                    timestamp: new Date(),
+                    operation: 'UPDATE',
+                    userId: req.user?.uid || 'unknown',
+                    collection: 'professores',
+                    recordId: id,
+                    cpfMasked: (0, cpfUtils_1.maskCPFForLogs)(resultadoCPF.cpfSanitizado),
+                    ip: req.ip,
+                    userAgent: req.get('user-agent')
+                });
             }
             let processedTags = tags || currentData.tags || [];
             if (typeof tags === 'string') {
@@ -199,7 +273,10 @@ class professoresController {
             }
             const dadosAtualizacao = {
                 nome: nome ? nome.trim() : currentData.nome,
+                cpf: cpfSanitizado,
+                email: email !== undefined ? email : currentData.email,
                 polo: polo !== undefined ? polo : currentData.polo,
+                localEstagio: localEstagio !== undefined ? localEstagio : currentData.localEstagio
             };
             await uptadeProfessorInFirebase(id, dadosAtualizacao);
             const professorAtualizado = await getProfessorFromFirebase(id);
