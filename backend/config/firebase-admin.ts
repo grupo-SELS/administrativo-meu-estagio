@@ -1,17 +1,41 @@
 import admin from 'firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
+import * as fs from 'fs';
+import * as path from 'path';
 
 let serviceAccount: any;
 
 try {
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    console.log('✅ Usando FIREBASE_SERVICE_ACCOUNT do .env');
     serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
   } else {
-    serviceAccount = require('./serviceAccountKey.json');
+    // Procura o arquivo em múltiplos locais possíveis
+    const possiblePaths = [
+      path.join(__dirname, 'serviceAccountKey.json'),
+      path.join(process.cwd(), 'config', 'serviceAccountKey.json'),
+      '/var/www/site-adm-app/backend/config/serviceAccountKey.json'
+    ];
+    
+    let fileFound = false;
+    for (const filePath of possiblePaths) {
+      if (fs.existsSync(filePath)) {
+        console.log(`✅ Service Account encontrado em: ${filePath}`);
+        const fileContent = fs.readFileSync(filePath, 'utf8');
+        serviceAccount = JSON.parse(fileContent);
+        fileFound = true;
+        break;
+      }
+    }
+    
+    if (!fileFound) {
+      console.error('❌ Service Account Key não encontrado em nenhum dos caminhos:');
+      possiblePaths.forEach(p => console.error(`   - ${p}`));
+    }
   }
-} catch (error) {
-  console.error('❌ Service Account Key não encontrado. Configure FIREBASE_SERVICE_ACCOUNT ou adicione serviceAccountKey.json');
+} catch (error: any) {
+  console.error('❌ Erro ao carregar Service Account Key:', error.message);
 }
 
 if (!admin.apps.length && serviceAccount) {
