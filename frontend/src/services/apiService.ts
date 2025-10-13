@@ -41,6 +41,18 @@ export default class ApiService {
       'Content-Type': 'application/json',
     };
 
+    // Pegar token do Firebase Auth
+    try {
+      const { auth } = await import('../config/firebase');
+      const user = auth.currentUser;
+      
+      if (user) {
+        const token = await user.getIdToken();
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    } catch (error) {
+      console.error('Erro ao obter token de autenticação:', error);
+    }
 
     if (import.meta.env.DEV || import.meta.env.VITE_ENV === 'development') {
       headers['x-dev-bypass'] = 'true';
