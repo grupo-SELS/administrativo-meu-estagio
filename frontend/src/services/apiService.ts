@@ -178,11 +178,16 @@ export default class ApiService {
       
       // Fazer requisição com FormData (sem Content-Type, o navegador define automaticamente)
       const url = `${this.API_BASE_URL}/comunicados`;
-      const headers: HeadersInit = {};
       
-      if (import.meta.env.DEV || import.meta.env.VITE_ENV === 'development') {
-        headers['x-dev-bypass'] = 'true';
-      }
+      // Obter headers de autenticação (incluindo token)
+      const baseHeaders = await this.getAuthHeaders();
+      // Remover Content-Type para deixar o navegador definir com boundary correto
+      const headers: Record<string, string> = {};
+      Object.keys(baseHeaders).forEach(key => {
+        if (key !== 'Content-Type') {
+          headers[key] = (baseHeaders as any)[key];
+        }
+      });
       
       const response = await fetch(url, {
         method: 'POST',
@@ -241,11 +246,16 @@ export default class ApiService {
       
       // Fazer requisição com FormData
       const url = `${this.API_BASE_URL}/comunicados/${id}`;
-      const headers: HeadersInit = {};
       
-      if (import.meta.env.DEV || import.meta.env.VITE_ENV === 'development') {
-        headers['x-dev-bypass'] = 'true';
-      }
+      // Obter headers de autenticação (incluindo token)
+      const baseHeaders = await this.getAuthHeaders();
+      // Remover Content-Type para deixar o navegador definir com boundary correto
+      const headers: Record<string, string> = {};
+      Object.keys(baseHeaders).forEach(key => {
+        if (key !== 'Content-Type') {
+          headers[key] = (baseHeaders as any)[key];
+        }
+      });
       
       const response = await fetch(url, {
         method: 'PUT',

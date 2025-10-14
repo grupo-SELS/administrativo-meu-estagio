@@ -1,10 +1,8 @@
 import { Header } from "../components/Header";
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { auth } from '../config/firebase';
 import { useToast } from '../contexts/ToastContext';
-
-const API_BASE_URL = 'http://localhost:3001';
+import ApiService from '../services/apiService';
 
 interface Professor {
     id: number;
@@ -44,14 +42,6 @@ export const ProfessorCreate = () => {
         setIsLoading(true);
 
         try {
-            const user = auth.currentUser;
-            
-            if (!user) {
-                throw new Error('Você precisa estar logado para criar um professor');
-            }
-
-            const token = await user.getIdToken(true);
-
             const bodyData = {
                 nome: formData.name,
                 cpf: formData.cpf,
@@ -61,32 +51,8 @@ export const ProfessorCreate = () => {
             };
 
             console.log('📤 Enviando dados do professor:', bodyData);
-            console.log('🔑 Token obtido, comprimento:', token.length);
 
-            const response = await fetch(`${API_BASE_URL}/api/professores`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(bodyData)
-            });
-
-            console.log('📥 Resposta recebida - Status:', response.status, response.statusText);
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('❌ Erro da API:', errorText);
-                let errorData;
-                try {
-                    errorData = JSON.parse(errorText);
-                } catch {
-                    throw new Error(`Erro ${response.status}: ${errorText}`);
-                }
-                throw new Error(errorData.error || errorData.message || 'Erro ao criar professor');
-            }
-
-            const data = await response.json();
+            const data = await ApiService.createProfessor(bodyData);
             console.log('✅ Professor criado com sucesso:', data);
             showSuccess('Professor criado com sucesso!');
             navigate('/professores');

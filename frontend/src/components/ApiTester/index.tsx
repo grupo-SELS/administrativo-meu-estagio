@@ -64,9 +64,9 @@ const ApiTester = () => {
           <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded">
             <strong>Erro:</strong> {error}
             <div className="mt-2 text-sm">
-              <p>• Verifique se o backend está rodando em http://localhost:3001</p>
+              <p>• Verifique se o backend está rodando</p>
               <p>• Verifique se o serviceAccountKey.json está configurado</p>
-              <p>• Execute: npm run test-firestore no backend</p>
+              <p>• Verifique se o Firebase Admin está inicializado</p>
             </div>
           </div>
         )}

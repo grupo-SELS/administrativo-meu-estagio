@@ -76,22 +76,11 @@ export const AlunoCreate = () => {
                 telefone: formData.telefone
             };
 
-            const response = await fetch('http://localhost:3001/api/alunos', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-dev-bypass': 'true'
-                },
-                body: JSON.stringify(alunoData)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Erro ao criar aluno');
-            }
-
-            const result = await response.json();
-            console.log('✅ Aluno criado:', result);
+            // Usar ApiService para incluir token automaticamente
+            const ApiService = (await import('../services/apiService')).default;
+            const aluno = await ApiService.createAluno(alunoData);
+            
+            console.log('✅ Aluno criado:', aluno);
             showSuccess('Aluno criado com sucesso!');
             navigate('/alunos');
         } catch (error: any) {
