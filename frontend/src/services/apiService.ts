@@ -44,14 +44,35 @@ export default class ApiService {
     // Pegar token do Firebase Auth
     try {
       const { auth } = await import('../config/firebase');
+      
+      // Esperar até que o Firebase termine de verificar a autenticação
+      await new Promise((resolve) => {
+        if (auth.currentUser) {
+          resolve(auth.currentUser);
+        } else {
+          const unsubscribe = auth.onAuthStateChanged((user) => {
+            unsubscribe();
+            resolve(user);
+          });
+          // Timeout de 2 segundos para evitar espera infinita
+          setTimeout(() => {
+            unsubscribe();
+            resolve(null);
+          }, 2000);
+        }
+      });
+      
       const user = auth.currentUser;
       
       if (user) {
         const token = await user.getIdToken();
         headers['Authorization'] = `Bearer ${token}`;
+        console.log('✅ Token adicionado ao header');
+      } else {
+        console.warn('⚠️ Usuário não autenticado - requisição sem token');
       }
     } catch (error) {
-      console.error('Erro ao obter token de autenticação:', error);
+      console.error('❌ Erro ao obter token de autenticação:', error);
     }
 
     if (import.meta.env.DEV || import.meta.env.VITE_ENV === 'development') {
