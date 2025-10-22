@@ -174,10 +174,12 @@ function GerenciamentoAlunos() {
                 const response = await apiService.get(`/alunos`);
                 if (response !== undefined && response !== null && typeof response === 'object' && 'alunos' in response && Array.isArray((response as any).alunos)) {
                     let alunos = (response as { alunos: Student[] }).alunos;
+                    console.log(`📊 Frontend: Total de alunos recebidos da API: ${alunos.length}`);
                     let alunosFiltrados = alunos.filter((aluno: Student) => aluno.type === 'aluno');
                     if (alunosFiltrados.length === 0 && alunos.length > 0) {
                         alunosFiltrados = alunos;
                     }
+                    console.log(`📊 Frontend: Total de alunos após filtragem de type: ${alunosFiltrados.length}`);
                     setStudents(alunosFiltrados);
                     setSelectedStudents(alunosFiltrados);
                 } else {
