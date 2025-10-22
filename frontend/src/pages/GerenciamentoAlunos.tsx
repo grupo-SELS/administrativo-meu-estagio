@@ -146,8 +146,8 @@ function GerenciamentoAlunos() {
         const matchesStatus = !filterStatus || student.statusMatricula === filterStatus;
         const matchesPolo = !filterPolo || student.polo === filterPolo;
         const matchesSearch = !searchTerm || 
-            student.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            student.matricula.toLowerCase().includes(searchTerm.toLowerCase());
+            (student.nome && student.nome.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (student.matricula && student.matricula.toLowerCase().includes(searchTerm.toLowerCase()));
         
         return matchesStatus && matchesPolo && matchesSearch;
     });

@@ -230,6 +230,8 @@ export class alunosController {
         alunos.push({ id: doc.id, ...doc.data() });
       });
 
+      console.log(`📊 Total de alunos retornados do Firestore: ${alunos.length}`);
+
       if (polo) {
         alunos = alunos.filter((c: any) =>
           typeof c.polo === 'string' && c.polo.toLowerCase().includes((polo as string).toLowerCase())
@@ -241,6 +243,8 @@ export class alunosController {
           typeof c.categoria === 'string' && c.categoria.toLowerCase() === (categoria as string).toLowerCase()
         );
       }
+
+      console.log(`✅ Total de alunos após filtros: ${alunos.length}`);
 
       res.json({
         alunos,
