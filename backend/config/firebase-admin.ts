@@ -1,8 +1,8 @@
 import admin from 'firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 let serviceAccount: any;
 
@@ -31,7 +31,9 @@ try {
     
     if (!fileFound) {
       console.error('❌ Service Account Key não encontrado em nenhum dos caminhos:');
-      possiblePaths.forEach(p => console.error(`   - ${p}`));
+      for (const p of possiblePaths) {
+        console.error(`   - ${p}`);
+      }
     }
   }
 } catch (error: any) {
@@ -54,4 +56,4 @@ if (!admin.apps.length && serviceAccount) {
 export const db = getFirestore();
 export const storage = getStorage();
 export const auth = admin.auth();
-export { admin };
+export default admin;

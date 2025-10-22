@@ -46,7 +46,7 @@ export const AlunoCreate = () => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: name === 'faltasEstagio' ? parseInt(value) || 0 : value
+            [name]: name === 'faltasEstagio' ? Number.parseInt(value) || 0 : value
         }));
     };
 

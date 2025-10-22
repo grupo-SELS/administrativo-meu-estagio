@@ -1360,7 +1360,7 @@ export default function AgendamentoEstagio() {
                                         type="number"
                                         min="0"
                                         value={formEdicao.vagasDisponiveis}
-                                        onChange={(e) => setFormEdicao({ ...formEdicao, vagasDisponiveis: parseInt(e.target.value) || 0 })}
+                                        onChange={(e) => setFormEdicao({ ...formEdicao, vagasDisponiveis: Number.parseInt(e.target.value) || 0 })}
                                         className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-blue-400"
                                     />
                                 </div>

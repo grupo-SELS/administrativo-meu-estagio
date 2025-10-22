@@ -148,7 +148,7 @@ export default class ApiService {
       };
       
       // Adicionar campos de texto com conversão
-      Object.keys(data).forEach(key => {
+      for (const key of Object.keys(data)) {
         if (key !== 'imagens') {
           const backendKey = fieldMapping[key] || key;
           const value = data[key];
@@ -163,12 +163,12 @@ export default class ApiService {
             }
           }
         }
-      });
+      }
       
       // Adicionar imagens
-      data.imagens.forEach((file: File) => {
+      for (const file of data.imagens) {
         formData.append('imagens', file);
-      });
+      }
       
       // Debug: Mostrar o que está no FormData
       console.log('📋 FormData preparado:');
@@ -183,11 +183,11 @@ export default class ApiService {
       const baseHeaders = await this.getAuthHeaders();
       // Remover Content-Type para deixar o navegador definir com boundary correto
       const headers: Record<string, string> = {};
-      Object.keys(baseHeaders).forEach(key => {
+      for (const key of Object.keys(baseHeaders)) {
         if (key !== 'Content-Type') {
           headers[key] = (baseHeaders as any)[key];
         }
-      });
+      }
       
       const response = await fetch(url, {
         method: 'POST',
@@ -222,7 +222,7 @@ export default class ApiService {
       };
       
       // Adicionar campos de texto com conversão
-      Object.keys(data).forEach(key => {
+      for (const key of Object.keys(data)) {
         if (key !== 'imagens') {
           const backendKey = fieldMapping[key] || key;
           const value = data[key];
@@ -237,12 +237,12 @@ export default class ApiService {
             }
           }
         }
-      });
+      }
       
       // Adicionar imagens
-      data.imagens.forEach((file: File) => {
+      for (const file of data.imagens) {
         formData.append('imagens', file);
-      });
+      }
       
       // Fazer requisição com FormData
       const url = `${this.API_BASE_URL}/comunicados/${id}`;
@@ -251,11 +251,11 @@ export default class ApiService {
       const baseHeaders = await this.getAuthHeaders();
       // Remover Content-Type para deixar o navegador definir com boundary correto
       const headers: Record<string, string> = {};
-      Object.keys(baseHeaders).forEach(key => {
+      for (const key of Object.keys(baseHeaders)) {
         if (key !== 'Content-Type') {
           headers[key] = (baseHeaders as any)[key];
         }
-      });
+      }
       
       const response = await fetch(url, {
         method: 'PUT',

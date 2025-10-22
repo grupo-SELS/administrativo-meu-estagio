@@ -33,7 +33,7 @@ export const ProfessorCreate = () => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: name === 'faltasEstagio' ? parseInt(value) || 0 : value
+            [name]: name === 'faltasEstagio' ? Number.parseInt(value) || 0 : value
         }));
     };
 
@@ -129,7 +129,7 @@ export const ProfessorCreate = () => {
                                     value={formData.cpf || ''}
                                     onChange={(e) => {
                                         // Remove caracteres não numéricos
-                                        const valor = e.target.value.replace(/\D/g, '');
+                                        const valor = e.target.value.replaceAll(/\D/g, '');
                                         let cpfFormatado = valor;
                                         
                                         // Formata: XXX.XXX.XXX-XX
