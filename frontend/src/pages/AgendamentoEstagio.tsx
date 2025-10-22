@@ -53,7 +53,7 @@ export default function AgendamentoEstagio() {
             setErroAlunos(null);
             try {
                 // Adicionar timestamp para evitar cache
-                const timestamp = new Date().getTime();
+                const timestamp = Date.now();
                 const response = await apiService.get<any>(`/alunos?t=${timestamp}`);
                 if (response && Array.isArray(response.alunos)) {
                     console.log(`📊 AgendamentoEstagio: Total de alunos recebidos: ${response.alunos.length}`);
@@ -63,7 +63,7 @@ export default function AgendamentoEstagio() {
                 }
             } catch (err: any) {
                 console.error('❌ Erro ao buscar alunos:', err);
-                if (err.message && err.message.includes('401')) {
+                if (err.message?.includes('401')) {
                     setErroAlunos('Você precisa estar logado para ver os alunos.');
                 } else {
                     setErroAlunos('Erro ao buscar alunos. Tente novamente.');
@@ -184,13 +184,13 @@ export default function AgendamentoEstagio() {
 
             const csvLines: string[] = [];
             
+            csvLines.push(
+                'RELATÓRIO DE AGENDAMENTOS DE ESTÁGIO',
+                `Data de Geração: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`,
+                ''
+            );
 
-            csvLines.push('RELATÓRIO DE AGENDAMENTOS DE ESTÁGIO');
-            csvLines.push(`Data de Geração: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`);
-            csvLines.push(''); 
-
-
-            estagios.forEach((estagio, index) => {
+            for (const [index, estagio] of estagios.entries()) {
                 // Buscar atribuições deste estágio
                 const atribuicao = atribuicoes.find(a => a.estagioId === estagio.id);
                 
@@ -204,42 +204,40 @@ export default function AgendamentoEstagio() {
                     ? alunos.filter(a => atribuicao.alunosIds.includes(a.id))
                     : [];
 
-
-                csvLines.push(`ESTÁGIO ${index + 1}`);
-                
-
-                csvLines.push(`Local:,${estagio.local || 'Local não informado'}`);
-                csvLines.push(`Área:,${estagio.area || 'Área não informada'}`);
-                csvLines.push(`Horários:,${estagio.horarios?.length > 0 ? estagio.horarios.join(', ') : 'Horário não informado'}`);
-                csvLines.push(`Vagas Disponíveis:,,,${estagio.vagasDisponiveis}`);
-                csvLines.push(`Vagas Preenchidas:,,,${alunosAtribuidos.length}`);
-                csvLines.push('');
-                
-
-                csvLines.push('Professor Orientador:');
-                csvLines.push('Nome,Matrícula,Polo,Horário');
+                csvLines.push(
+                    `ESTÁGIO ${index + 1}`,
+                    `Local:,${estagio.local || 'Local não informado'}`,
+                    `Área:,${estagio.area || 'Área não informada'}`,
+                    `Horários:,${estagio.horarios?.length > 0 ? estagio.horarios.join(', ') : 'Horário não informado'}`,
+                    `Vagas Disponíveis:,,,${estagio.vagasDisponiveis}`,
+                    `Vagas Preenchidas:,,,${alunosAtribuidos.length}`,
+                    '',
+                    'Professor Orientador:',
+                    'Nome,Matrícula,Polo,Horário'
+                );
                 if (professorAtribuido) {
                     const horarioProfessor = professorAtribuido.horario || estagio.horarios?.join(' - ') || '';
                     csvLines.push(`${professorAtribuido.nome},${professorAtribuido.matricula || 'N/A'},${professorAtribuido.polo || 'resende'},${horarioProfessor}`);
                 } else {
                     csvLines.push('Nenhum professor atribuído,,,');
                 }
-                csvLines.push('');
-                
 
-                csvLines.push('Alunos no Estágio:');
-                csvLines.push('Nome,Matrícula,Polo,Horário');
+                csvLines.push(
+                    '',
+                    'Alunos no Estágio:',
+                    'Nome,Matrícula,Polo,Horário'
+                );
+
                 if (alunosAtribuidos.length > 0) {
-                    alunosAtribuidos.forEach((aluno) => {
+                    for (const aluno of alunosAtribuidos) {
                         const horarioAluno = aluno.horario || estagio.horarios?.join(' - ') || '';
                         csvLines.push(`${aluno.nome},${aluno.matricula || 'N/A'},${aluno.polo || 'voltaredonda'},${horarioAluno}`);
-                    });
+                    }
                 } else {
                     csvLines.push('Nenhum aluno atribuído,,,');
                 }
                 csvLines.push('');
-            });
-
+            }
 
             const csvContent = csvLines.join('\n');
 
@@ -253,13 +251,13 @@ export default function AgendamentoEstagio() {
             link.setAttribute('href', url);
             
 
-            const dataHora = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+            const dataHora = new Date().toISOString().slice(0, 19).replaceAll(':', '-');
             link.setAttribute('download', `agendamentos-estagio-${dataHora}.csv`);
             
 
             document.body.appendChild(link);
             link.click();
-            document.body.removeChild(link);
+            link.remove();
             
 
             URL.revokeObjectURL(url);
@@ -431,8 +429,8 @@ export default function AgendamentoEstagio() {
     const filteredAlunos = useMemo(() => {
         return alunos.filter(a => {
             const matchesSearch = searchTerm.trim() === '' || 
-                a.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                (a.matricula && a.matricula.includes(searchTerm));
+                a.nome?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                a.matricula?.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesPolo = !filterPolo || a.polo === filterPolo;
             return matchesSearch && matchesPolo;
         });

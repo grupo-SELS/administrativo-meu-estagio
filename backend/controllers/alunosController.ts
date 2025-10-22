@@ -53,7 +53,7 @@ async function getAlunosFromFirebase(req: Request, res: Response) {
 
 
 
-async function getAlunoFromFirebase(firebaseId: string): Promise<any | null> {
+async function getAlunoFromFirebase(firebaseId: string): Promise<Record<string, unknown> | null> {
   try {
     const doc = await usersCollection.doc(firebaseId).get();
 
@@ -134,7 +134,7 @@ async function deleteAlunoFromFirebase(firebaseId: string): Promise<void> {
   }
 }
 
-export class alunosController {
+export class AlunosController {
 
   async criar(req: Request, res: Response): Promise<void> {
     try {
@@ -378,16 +378,16 @@ export class alunosController {
         nome: nome ? nome.trim() : currentData.nome,
         cpf: cpfSanitizado,
         matricula: matricula ? matricula.trim() : currentData.matricula,
-        email: email !== undefined ? email : currentData.email,
-        polo: polo !== undefined ? polo : currentData.polo,
+        email: email ?? currentData.email,
+        polo: polo ?? currentData.polo,
         categoria: categoria || currentData.categoria,
         tags: processedTags,
         imagens: finalImages,
-        localEstagio: localEstagio !== undefined ? localEstagio : currentData.localEstagio,
-        professorOrientador: professorOrientador !== undefined ? professorOrientador : currentData.professorOrientador,
-        statusMatricula: statusMatricula !== undefined ? statusMatricula : currentData.statusMatricula,
-        turma: turma !== undefined ? turma : currentData.turma,
-        telefone: telefone !== undefined ? telefone : currentData.telefone
+        localEstagio: localEstagio ?? currentData.localEstagio,
+        professorOrientador: professorOrientador ?? currentData.professorOrientador,
+        statusMatricula: statusMatricula ?? currentData.statusMatricula,
+        turma: turma ?? currentData.turma,
+        telefone: telefone ?? currentData.telefone
       };
 
       await updateAlunoInFirebase(id, dadosAtualizacao);
@@ -428,4 +428,4 @@ export class alunosController {
     }
   }
 }
-export default new alunosController();
+export default new AlunosController();

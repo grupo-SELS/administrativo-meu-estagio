@@ -4,9 +4,8 @@ import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { useState, useEffect } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { useNavigate } from 'react-router-dom';
-import  apiService  from '../services/apiService';
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import apiService from '../services/apiService';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
 
@@ -26,7 +25,7 @@ type Student = {
     type?: string;
 };
 
-function DropdownStatus({ selectedStatus, onStatusChange }: { selectedStatus: string | null, onStatusChange: (status: string | null) => void }) {
+function DropdownStatus({ selectedStatus, onStatusChange }: Readonly<{ selectedStatus: string | null, onStatusChange: (status: string | null) => void }>) {
     return (
         <Menu as="div" className="relative inline-block">
             <MenuButton className="inline-flex w-full justify-center gap-x-1.5 rounded-md bg-white/10 px-3 py-2 text-sm font-semibold text-white inset-ring-1 inset-ring-white/5 hover:bg-white/20">
@@ -77,7 +76,7 @@ function DropdownStatus({ selectedStatus, onStatusChange }: { selectedStatus: st
     );
 }
 
-function DropdownPolo({ selectedPolo, onPoloChange }: { selectedPolo: string | null, onPoloChange: (polo: string | null) => void }) {
+function DropdownPolo({ selectedPolo, onPoloChange }: Readonly<{ selectedPolo: string | null, onPoloChange: (polo: string | null) => void }>) {
     return (
         <Menu as="div" className="relative inline-block">
             <MenuButton className="inline-flex w-full justify-center gap-x-1.5 rounded-md bg-white/10 px-3 py-2 text-sm font-semibold text-white inset-ring-1 inset-ring-white/5 hover:bg-white/20">
@@ -141,13 +140,20 @@ function GerenciamentoAlunos() {
     const [filterPolo, setFilterPolo] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState<string>('');
 
+    // Helper para retornar classe de badge de faltas
+    const getFaltasBadgeClass = (faltas: number): string => {
+        if (faltas === 0) return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+        if (faltas <= 2) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+    };
+
     // Filtrar alunos por status, polo e termo de pesquisa
     const filteredStudents = selectedStudents.filter(student => {
         const matchesStatus = !filterStatus || student.statusMatricula === filterStatus;
         const matchesPolo = !filterPolo || student.polo === filterPolo;
         const matchesSearch = !searchTerm || 
-            (student.nome && student.nome.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (student.matricula && student.matricula.toLowerCase().includes(searchTerm.toLowerCase()));
+            student.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.matricula?.toLowerCase().includes(searchTerm.toLowerCase());
         
         return matchesStatus && matchesPolo && matchesSearch;
     });
@@ -163,20 +169,30 @@ function GerenciamentoAlunos() {
     useEffect(() => {
         const auth = getAuth();
         const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (!user) {
-                navigate('/login');
-            } else {
+            if (user) {
                 fetchAlunos();
+            } else {
+                navigate('/login');
             }
         });
         async function fetchAlunos() {
             try {
                 // Adicionar timestamp para evitar cache
-                const timestamp = new Date().getTime();
+                const timestamp = Date.now();
+                console.log(`🔄 Iniciando fetch de alunos com timestamp: ${timestamp}`);
                 const response = await apiService.get(`/alunos?t=${timestamp}`);
+                console.log(`📥 Resposta completa da API:`, response);
+                console.log(`📋 Tipo de response:`, typeof response);
+                if (response && typeof response === 'object') {
+                  console.log(`📋 Keys de response:`, Object.keys(response as Record<string, unknown>));
+                }
+                
                 if (response !== undefined && response !== null && typeof response === 'object' && 'alunos' in response && Array.isArray((response as any).alunos)) {
                     let alunos = (response as { alunos: Student[] }).alunos;
                     console.log(`📊 Frontend: Total de alunos recebidos da API: ${alunos.length}`);
+                    console.log(`📊 Frontend: Array.isArray(alunos)? ${Array.isArray(alunos)}`);
+                    console.log(`📊 Frontend: Primeiros 3 alunos:`, alunos.slice(0, 3));
+                    
                     let alunosFiltrados = alunos.filter((aluno: Student) => aluno.type === 'aluno');
                     if (alunosFiltrados.length === 0 && alunos.length > 0) {
                         alunosFiltrados = alunos;
@@ -185,6 +201,7 @@ function GerenciamentoAlunos() {
                     setStudents(alunosFiltrados);
                     setSelectedStudents(alunosFiltrados);
                 } else {
+                    console.error('❌ Resposta da API não contém alunos array!');
                     setError('Resposta inesperada da API ao buscar alunos.');
                 }
             } catch (err: any) {
@@ -213,15 +230,17 @@ function GerenciamentoAlunos() {
 
 
     const handleSelectAll = (checked: boolean) => {
+        const newSet = new Set(selectedStudentIds);
         if (checked) {
-            const newSet = new Set(selectedStudentIds);
-            currentStudents.forEach(s => newSet.add(s.id));
-            setSelectedStudentIds(newSet);
+            for (const s of currentStudents) {
+                newSet.add(s.id);
+            }
         } else {
-            const newSet = new Set(selectedStudentIds);
-            currentStudents.forEach(s => newSet.delete(s.id));
-            setSelectedStudentIds(newSet);
+            for (const s of currentStudents) {
+                newSet.delete(s.id);
+            }
         }
+        setSelectedStudentIds(newSet);
     };
 
 
@@ -504,12 +523,7 @@ function GerenciamentoAlunos() {
                                                 </td>
                                                 <td className="px-3 py-2">
                                                     <div className="flex items-center gap-2">
-                                                        <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${student.faltasEstagio === 0
-                                                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-                                                            : student.faltasEstagio <= 2
-                                                                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
-                                                                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
-                                                            }`}>
+                                                        <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${getFaltasBadgeClass(student.faltasEstagio)}`}>
                                                             {student.faltasEstagio}
                                                         </span>
                                                     </div>
