@@ -135,6 +135,8 @@ function GerenciamentoAlunos() {
     const [selectedStudents, setSelectedStudents] = useState<Student[]>([]);
     const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
     const [error, setError] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 15;
     const [filterStatus, setFilterStatus] = useState<string | null>(null);
     const [filterPolo, setFilterPolo] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState<string>('');
@@ -150,8 +152,13 @@ function GerenciamentoAlunos() {
         return matchesStatus && matchesPolo && matchesSearch;
     });
 
-    const isAllSelected = filteredStudents.length > 0 && filteredStudents.every(s => selectedStudentIds.has(s.id));
-    const isSomeSelected = filteredStudents.some(s => selectedStudentIds.has(s.id)) && !isAllSelected;
+    const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentStudents = filteredStudents.slice(startIndex, endIndex);
+
+    const isAllSelected = currentStudents.length > 0 && currentStudents.every(s => selectedStudentIds.has(s.id));
+    const isSomeSelected = currentStudents.some(s => selectedStudentIds.has(s.id)) && !isAllSelected;
 
     useEffect(() => {
         const auth = getAuth();
@@ -197,17 +204,18 @@ function GerenciamentoAlunos() {
         }
 
         setSelectedStudents(filtered);
+        setCurrentPage(1); // Resetar para primeira página ao filtrar
     }, [filterStatus, filterPolo, students]);
 
 
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
             const newSet = new Set(selectedStudentIds);
-            filteredStudents.forEach(s => newSet.add(s.id));
+            currentStudents.forEach(s => newSet.add(s.id));
             setSelectedStudentIds(newSet);
         } else {
             const newSet = new Set(selectedStudentIds);
-            filteredStudents.forEach(s => newSet.delete(s.id));
+            currentStudents.forEach(s => newSet.delete(s.id));
             setSelectedStudentIds(newSet);
         }
     };
@@ -459,7 +467,7 @@ function GerenciamentoAlunos() {
                                             </td>
                                         </tr>
                                     ) : (
-                                        filteredStudents.map((student) => (
+                                        currentStudents.map((student) => (
                                             <tr key={student.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">
                                                 <td className="w-4 p-2">
                                                     <div className="flex items-center">
@@ -534,8 +542,53 @@ function GerenciamentoAlunos() {
                         </div>
                         <div className="flex items-center justify-between mt-6 px-4">
                             <div className="text-sm text-gray-400">
-                                Total de {filteredStudents.length} aluno{filteredStudents.length !== 1 ? 's' : ''} encontrado{filteredStudents.length !== 1 ? 's' : ''}
+                                Mostrando {startIndex + 1} a {Math.min(endIndex, filteredStudents.length)} de {filteredStudents.length} alunos
                             </div>
+                            {totalPages > 1 && (
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                        disabled={currentPage === 1}
+                                        className="px-4 py-2 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200 border border-gray-700"
+                                    >
+                                        Anterior
+                                    </button>
+                                    <div className="flex gap-1">
+                                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                            let pageNum;
+                                            if (totalPages <= 5) {
+                                                pageNum = i + 1;
+                                            } else if (currentPage <= 3) {
+                                                pageNum = i + 1;
+                                            } else if (currentPage >= totalPages - 2) {
+                                                pageNum = totalPages - 4 + i;
+                                            } else {
+                                                pageNum = currentPage - 2 + i;
+                                            }
+                                            return (
+                                                <button
+                                                    key={pageNum}
+                                                    onClick={() => setCurrentPage(pageNum)}
+                                                    className={`w-10 h-10 rounded-lg transition-all duration-200 border ${
+                                                        currentPage === pageNum
+                                                            ? 'bg-blue-600 text-white border-blue-500'
+                                                            : 'bg-gray-800 hover:bg-gray-700 text-gray-300 border-gray-700'
+                                                    }`}
+                                                >
+                                                    {pageNum}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                        disabled={currentPage === totalPages}
+                                        className="px-4 py-2 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200 border border-gray-700"
+                                    >
+                                        Próximo
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </>
                 )}

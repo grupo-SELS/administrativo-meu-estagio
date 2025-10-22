@@ -448,8 +448,10 @@ export default function AgendamentoEstagio() {
     }, [estagios, mostrarOcupados, atribuicoes]);
 
     
-    // Alunos não são paginados (mostrar todos)
-    const currentAlunos = filteredAlunos;
+    const alunosTotalPages = Math.max(1, Math.ceil(filteredAlunos.length / itemsPerPageAlunos));
+    const alunosStartIndex = (alunosPage - 1) * itemsPerPageAlunos;
+    const alunosEndIndex = alunosStartIndex + itemsPerPageAlunos;
+    const currentAlunos = filteredAlunos.slice(alunosStartIndex, alunosEndIndex);
 
     
     const professoresTotalPages = Math.max(1, Math.ceil(professores.length / itemsPerPageProfessores));
@@ -816,11 +818,33 @@ export default function AgendamentoEstagio() {
                                         )}
                                     </ul>
 
-                                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-700">
-                                        <div className="text-xs text-gray-400">
-                                            Total: {filteredAlunos.length} aluno{filteredAlunos.length !== 1 ? 's' : ''}
+
+                                    {alunosTotalPages > 1 && !atribuindoAlunos && filteredAlunos.length > 0 && (
+                                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-700">
+                                            <div className="text-xs text-gray-400">
+                                                {alunosStartIndex + 1}-{Math.min(alunosEndIndex, filteredAlunos.length)} de {filteredAlunos.length}
+                                            </div>
+                                            <div className="flex gap-1">
+                                                <button
+                                                    onClick={() => setAlunosPage(prev => Math.max(1, prev - 1))}
+                                                    disabled={alunosPage === 1}
+                                                    className="px-3 py-1 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-xs transition-all"
+                                                >
+                                                    ←
+                                                </button>
+                                                <span className="px-3 py-1 text-gray-300 text-xs">
+                                                    {alunosPage}/{alunosTotalPages}
+                                                </span>
+                                                <button
+                                                    onClick={() => setAlunosPage(prev => Math.min(alunosTotalPages, prev + 1))}
+                                                    disabled={alunosPage === alunosTotalPages}
+                                                    className="px-3 py-1 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-xs transition-all"
+                                                >
+                                                    →
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
 
                                     {atribuindoAlunos && (
                                         <div className="flex gap-3 justify-end mt-4">
