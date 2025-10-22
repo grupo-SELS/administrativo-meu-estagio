@@ -197,18 +197,17 @@ function GerenciamentoAlunos() {
         }
 
         setSelectedStudents(filtered);
-        setCurrentPage(1); // Resetar para primeira página ao filtrar
     }, [filterStatus, filterPolo, students]);
 
 
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
             const newSet = new Set(selectedStudentIds);
-            currentStudents.forEach(s => newSet.add(s.id));
+            filteredStudents.forEach(s => newSet.add(s.id));
             setSelectedStudentIds(newSet);
         } else {
             const newSet = new Set(selectedStudentIds);
-            currentStudents.forEach(s => newSet.delete(s.id));
+            filteredStudents.forEach(s => newSet.delete(s.id));
             setSelectedStudentIds(newSet);
         }
     };

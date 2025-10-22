@@ -448,10 +448,8 @@ export default function AgendamentoEstagio() {
     }, [estagios, mostrarOcupados, atribuicoes]);
 
     
-    const alunosTotalPages = Math.max(1, Math.ceil(filteredAlunos.length / itemsPerPageAlunos));
-    const alunosStartIndex = (alunosPage - 1) * itemsPerPageAlunos;
-    const alunosEndIndex = alunosStartIndex + itemsPerPageAlunos;
-    const currentAlunos = filteredAlunos.slice(alunosStartIndex, alunosEndIndex);
+    // Alunos não são paginados (mostrar todos)
+    const currentAlunos = filteredAlunos;
 
     
     const professoresTotalPages = Math.max(1, Math.ceil(professores.length / itemsPerPageProfessores));
