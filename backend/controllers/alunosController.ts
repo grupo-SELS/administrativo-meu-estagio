@@ -224,11 +224,30 @@ export class alunosController {
     try {
       const { polo, categoria } = req.query;
 
-      const snapshot = await usersCollection.where('type', '==', 'aluno').get();
       let alunos: any[] = [];
-      snapshot.forEach(doc => {
+      let query = usersCollection.where('type', '==', 'aluno');
+      let snapshot = await query.get();
+
+      // Primeiro lote
+      for (const doc of snapshot.docs) {
         alunos.push({ id: doc.id, ...doc.data() });
-      });
+      }
+
+      console.log(`📊 Primeiro lote de alunos: ${alunos.length}`);
+
+      // Se há documentos, continuar buscando a partir do último
+      while (snapshot.docs.length === 50) {
+        const lastDoc = snapshot.docs.at(-1);
+        if (!lastDoc) break;
+        
+        snapshot = await query.startAfter(lastDoc).get();
+        
+        for (const doc of snapshot.docs) {
+          alunos.push({ id: doc.id, ...doc.data() });
+        }
+        
+        console.log(`📊 Lote adicional: ${snapshot.docs.length} documentos. Total acumulado: ${alunos.length}`);
+      }
 
       console.log(`📊 Total de alunos retornados do Firestore: ${alunos.length}`);
 
