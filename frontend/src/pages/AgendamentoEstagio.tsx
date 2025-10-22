@@ -747,6 +747,18 @@ export default function AgendamentoEstagio() {
                                 <div className="text-red-400">{erroAlunos}</div>
                             ) : (
                                 <>
+                                    <div className="mb-4 flex flex-col gap-3">
+                                        <input
+                                            type="text"
+                                            placeholder="Pesquisar por nome ou matrícula..."
+                                            value={searchTerm}
+                                            onChange={(e) => {
+                                                setSearchTerm(e.target.value);
+                                                setAlunosPage(1);
+                                            }}
+                                            className="w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
+                                        />
+                                    </div>
                                     <ul className="flex-1 overflow-y-auto pr-2 scrollbar-styled space-y-3">
                                         {currentAlunos.length === 0 ? (
                                             <div className="text-gray-400 text-center py-8">

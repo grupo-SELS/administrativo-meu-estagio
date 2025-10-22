@@ -222,7 +222,7 @@ export class alunosController {
 
   async listar(req: Request, res: Response): Promise<void> {
     try {
-      const { polo, categoria, limite = 50 } = req.query;
+      const { polo, categoria } = req.query;
 
       const snapshot = await usersCollection.where('type', '==', 'aluno').get();
       let alunos: any[] = [];
@@ -242,15 +242,10 @@ export class alunosController {
         );
       }
 
-      const limiteNum = Number(limite);
-      if (limiteNum > 0) {
-        alunos = alunos.slice(0, limiteNum);
-      }
-
       res.json({
         alunos,
         total: alunos.length,
-        filtros: { polo, categoria, limite }
+        filtros: { polo, categoria }
       });
     } catch (error: any) {
       console.error('❌ Erro ao listar alunos:', error);
