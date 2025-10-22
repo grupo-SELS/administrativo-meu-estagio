@@ -171,7 +171,9 @@ function GerenciamentoAlunos() {
         });
         async function fetchAlunos() {
             try {
-                const response = await apiService.get(`/alunos`);
+                // Adicionar timestamp para evitar cache
+                const timestamp = new Date().getTime();
+                const response = await apiService.get(`/alunos?t=${timestamp}`);
                 if (response !== undefined && response !== null && typeof response === 'object' && 'alunos' in response && Array.isArray((response as any).alunos)) {
                     let alunos = (response as { alunos: Student[] }).alunos;
                     console.log(`📊 Frontend: Total de alunos recebidos da API: ${alunos.length}`);

@@ -52,8 +52,11 @@ export default function AgendamentoEstagio() {
             setLoadingAlunos(true);
             setErroAlunos(null);
             try {
-                const response = await apiService.get<any>('/alunos');
+                // Adicionar timestamp para evitar cache
+                const timestamp = new Date().getTime();
+                const response = await apiService.get<any>(`/alunos?t=${timestamp}`);
                 if (response && Array.isArray(response.alunos)) {
+                    console.log(`📊 AgendamentoEstagio: Total de alunos recebidos: ${response.alunos.length}`);
                     setAlunos(response.alunos);
                 } else {
                     setErroAlunos('Nenhum aluno encontrado.');

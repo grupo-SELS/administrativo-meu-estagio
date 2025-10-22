@@ -268,6 +268,11 @@ export class alunosController {
 
       console.log(`✅ Total de alunos após filtros: ${alunos.length}`);
 
+      // Headers para evitar cache
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+
       res.json({
         alunos,
         total: alunos.length,
