@@ -1,0 +1,23 @@
+{
+  "id": "mtoqmiaqNjN2ZJ2KwpHC",
+  "titulo": "123",
+  "conteudo": "321",
+  "autor": "Admin - Volta Redonda",
+  "email": "",
+  "polo": "Volta Redonda",
+  "categoria": "Geral",
+  "status": "ativo",
+  "prioridade": "media",
+  "dataPublicacao": "2025-09-16T19:01:44.757Z",
+  "timestamp": 1758049304757,
+  "tags": [
+    "123"
+  ],
+  "imagens": [
+    "/uploads/img_1758049304745_12a073cdc8813eeb.png"
+  ],
+  "visualizacoes": 0,
+  "ativo": true,
+  "criadoEm": "2025-09-16T19:01:44.757Z",
+  "atualizadoEm": "2025-09-16T19:01:44.757Z"
+}

@@ -1,0 +1,80 @@
+@import "tailwindcss";
+@import 'react-big-calendar/lib/css/react-big-calendar.css';
+
+:root {
+  background-color: #101828;
+}
+
+.calendar-dark .rbc-calendar {
+  @apply bg-gray-800 text-white;
+}
+
+@layer utilities {
+  .scrollbar-styled {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.blue.500') theme('colors.gray-800');
+  }
+
+  .scrollbar-styled::-webkit-scrollbar {
+    @apply w-2.5;
+  }
+
+  .scrollbar-styled::-webkit-scrollbar-track {
+    @apply bg-gray-800 rounded-r-2xl;
+  }
+
+  .scrollbar-styled::-webkit-scrollbar-thumb {
+    @apply bg-gradient-to-b from-blue-500 to-blue-600 rounded-md border-2 border-gray-800 transition-all duration-300;
+  }
+
+  .scrollbar-styled::-webkit-scrollbar-thumb:hover {
+    @apply from-blue-400 to-blue-500 border-gray-900;
+  }
+
+  .scrollbar-styled::-webkit-scrollbar-thumb:active {
+    @apply from-blue-600 to-blue-800;
+  }
+
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 0.3s ease-out;
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.2s ease-out;
+  }
+
+  @keyframes scale-in {
+    from {
+      transform: scale(0.95);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.2s ease-out;
+  }
+}
