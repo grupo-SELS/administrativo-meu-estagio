@@ -224,32 +224,35 @@ export class alunosController {
     try {
       const { polo, categoria } = req.query;
 
+      const MAX_ALUNOS = 500;
       let alunos: any[] = [];
       let query = usersCollection.where('type', '==', 'aluno');
       let snapshot = await query.get();
 
       // Primeiro lote
       for (const doc of snapshot.docs) {
+        if (alunos.length >= MAX_ALUNOS) break;
         alunos.push({ id: doc.id, ...doc.data() });
       }
 
       console.log(`📊 Primeiro lote de alunos: ${alunos.length}`);
 
-      // Se há documentos, continuar buscando a partir do último
-      while (snapshot.docs.length === 50) {
+      // Se há documentos e ainda não atingimos o limite, continuar buscando a partir do último
+      while (snapshot.docs.length === 50 && alunos.length < MAX_ALUNOS) {
         const lastDoc = snapshot.docs.at(-1);
         if (!lastDoc) break;
         
         snapshot = await query.startAfter(lastDoc).get();
         
         for (const doc of snapshot.docs) {
+          if (alunos.length >= MAX_ALUNOS) break;
           alunos.push({ id: doc.id, ...doc.data() });
         }
         
         console.log(`📊 Lote adicional: ${snapshot.docs.length} documentos. Total acumulado: ${alunos.length}`);
       }
 
-      console.log(`📊 Total de alunos retornados do Firestore: ${alunos.length}`);
+      console.log(`📊 Total de alunos retornados do Firestore: ${alunos.length} (limite: ${MAX_ALUNOS})`);
 
       if (polo) {
         alunos = alunos.filter((c: any) =>
