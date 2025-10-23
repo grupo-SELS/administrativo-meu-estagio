@@ -5,7 +5,7 @@ import { SlOptionsVertical } from "react-icons/sl";
 import { FiEdit3, FiTrash2 } from "react-icons/fi";
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { apiService, type Comunicado } from '../services/apiService';
+import apiService, { type Comunicado } from '../services/apiService';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
 
@@ -55,7 +55,7 @@ export function Notes() {
         }
 
         try {
-            await apiService.deleteComunicado(comunicadoId);
+            await apiService.delete(`/comunicados/${comunicadoId}`);
             
 
             setComunicados(prevComunicados => 
@@ -148,10 +148,14 @@ export function Notes() {
                 setLoading(true);
                 setError(null);
                 const response = await apiService.getComunicados();
-                setComunicados(response.comunicados || []);
+                const comunicadosData = Array.isArray(response.comunicados) 
+                    ? response.comunicados 
+                    : [];
+                setComunicados(comunicadosData);
             } catch (err) {
                 console.error('Erro ao carregar comunicados:', err);
                 setError('Erro ao carregar comunicados. Tente novamente.');
+                setComunicados([]);
             } finally {
                 setLoading(false);
             }
@@ -245,7 +249,7 @@ export function Notes() {
                                                                 {`admin - ${comunicado.polo || '---'}`}
                                                             </h5>
                                                             <h6 className="text-gray-300 text-xs font-normal leading-5">
-                                                                {getTempoRelativo(comunicado.dataPublicacao)}
+                                                                {comunicado.dataPublicacao ? getTempoRelativo(comunicado.dataPublicacao) : 'Data não disponível'}
                                                             </h6>
                                                         </div>
                                                     </div>
@@ -318,10 +322,10 @@ export function Notes() {
                                                                     <div 
                                                                         key={index} 
                                                                         className="relative overflow-hidden rounded-lg aspect-video bg-gray-700 cursor-pointer hover:opacity-90 transition-opacity"
-                                                                        onClick={() => openImageModal(imagem, comunicado.titulo)}
+                                                                        onClick={() => openImageModal(apiService.getImageUrl(imagem), comunicado.titulo)}
                                                                     >
                                                                         <img
-                                                                            src={imagem}
+                                                                            src={apiService.getImageUrl(imagem)}
                                                                             alt={`Anexo ${index + 1} - ${comunicado.titulo}`}
                                                                             className="w-full h-full object-cover"
                                                                             loading="lazy"

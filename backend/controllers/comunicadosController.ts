@@ -176,6 +176,12 @@ export class ComunicadosController {
 
   async criar(req: Request, res: Response): Promise<void> {
     try {
+      console.log('🔍 Backend recebeu req.body:', JSON.stringify(req.body, null, 2));
+      console.log('🔍 title:', req.body.title);
+      console.log('🔍 titulo:', req.body.titulo);
+      console.log('🔍 message:', req.body.message);
+      console.log('🔍 conteudo:', req.body.conteudo);
+      
       const title = req.body.title || req.body.titulo || '';
       const message = req.body.message || req.body.conteudo || '';
       const email = req.body.email || '';
@@ -185,17 +191,25 @@ export class ComunicadosController {
       const imagens = req.body.imagens || [];
       const prioridade = req.body.prioridade || 'media';
 
+      console.log('🔍 Após processar:');
+      console.log('  - title:', title);
+      console.log('  - message:', message);
+      console.log('  - titleTrimmed:', title.toString().trim());
+      console.log('  - messageTrimmed:', message.toString().trim());
+
       const titleTrimmed = title.toString().trim();
       const messageTrimmed = message.toString().trim();
 
       if (!titleTrimmed || !messageTrimmed) {
+        console.log('❌ Validação falhou!');
         res.status(400).json({
           error: 'Título e conteúdo são obrigatórios',
           details: {
             titleRecebido: !!title,
             messageRecebido: !!message,
             titleVazio: !titleTrimmed,
-            messageVazio: !messageTrimmed
+            messageVazio: !messageTrimmed,
+            reqBody: req.body
           }
         });
         return;

@@ -20,9 +20,13 @@ async function createAgendamentoInFirebase(dados) {
             alunoId: dados.alunoId || '',
             professor: dados.professor || '',
             professorId: dados.professorId || '',
+            alunosIds: dados.alunosIds || [],
+            alunosNomes: dados.alunosNomes || [],
+            professoresIds: dados.professoresIds || [],
+            professoresNomes: dados.professoresNomes || [],
             observacoes: dados.observacoes || '',
             data: dados.data,
-            status: dados.status || (dados.aluno && dados.professor ? 'confirmado' : 'pendente'),
+            status: dados.status || 'vigente',
             createdAt: firestore_1.FieldValue.serverTimestamp(),
             updatedAt: firestore_1.FieldValue.serverTimestamp()
         };
@@ -53,9 +57,14 @@ async function getAllAgendamentosFromFirebase() {
                 alunoId: data.alunoId || '',
                 professor: data.professor || '',
                 professorId: data.professorId || '',
+                alunosIds: data.alunosIds || [],
+                alunosNomes: data.alunosNomes || [],
+                professoresIds: data.professoresIds || [],
+                professoresNomes: data.professoresNomes || [],
+                vagasDisponiveis: data.vagasDisponiveis || 0,
                 observacoes: data.observacoes || '',
                 data: data.data || '',
-                status: data.status || 'confirmado',
+                status: data.status || 'vigente',
                 createdAt: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
                 updatedAt: data.updatedAt && data.updatedAt.toDate ? data.updatedAt.toDate().toISOString() : new Date().toISOString()
             });
@@ -83,9 +92,14 @@ async function getAgendamentoFromFirebase(firebaseId) {
                 alunoId: data?.alunoId || '',
                 professor: data?.professor || '',
                 professorId: data?.professorId || '',
+                alunosIds: data?.alunosIds || [],
+                alunosNomes: data?.alunosNomes || [],
+                professoresIds: data?.professoresIds || [],
+                professoresNomes: data?.professoresNomes || [],
+                vagasDisponiveis: data?.vagasDisponiveis || 0,
                 observacoes: data?.observacoes || '',
                 data: data?.data || '',
-                status: data?.status || 'confirmado',
+                status: data?.status || 'vigente',
                 createdAt: data?.createdAt && data.createdAt.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
                 updatedAt: data?.updatedAt && data.updatedAt.toDate ? data.updatedAt.toDate().toISOString() : new Date().toISOString()
             };
@@ -106,6 +120,8 @@ async function updateAgendamentoInFirebase(firebaseId, dados) {
             updateData.localEstagio = dados.localEstagio;
         if (dados.area !== undefined)
             updateData.area = dados.area;
+        if (dados.vagasDisponiveis !== undefined)
+            updateData.vagasDisponiveis = dados.vagasDisponiveis;
         if (dados.horarioInicio !== undefined)
             updateData.horarioInicio = dados.horarioInicio;
         if (dados.horarioFim !== undefined)
@@ -118,6 +134,14 @@ async function updateAgendamentoInFirebase(firebaseId, dados) {
             updateData.professor = dados.professor;
         if (dados.professorId !== undefined)
             updateData.professorId = dados.professorId;
+        if (dados.alunosIds !== undefined)
+            updateData.alunosIds = dados.alunosIds;
+        if (dados.alunosNomes !== undefined)
+            updateData.alunosNomes = dados.alunosNomes;
+        if (dados.professoresIds !== undefined)
+            updateData.professoresIds = dados.professoresIds;
+        if (dados.professoresNomes !== undefined)
+            updateData.professoresNomes = dados.professoresNomes;
         if (dados.observacoes !== undefined)
             updateData.observacoes = dados.observacoes;
         if (dados.data !== undefined)
@@ -187,6 +211,7 @@ class AgendamentosController {
             const dadosAgendamento = {
                 localEstagio,
                 area,
+                vagasDisponiveis,
                 horarioInicio,
                 horarioFim,
                 aluno,

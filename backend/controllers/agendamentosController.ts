@@ -19,9 +19,14 @@ interface AgendamentoData {
   alunoId?: string;
   professor?: string;
   professorId?: string;
+  // Novos campos para múltiplos alunos e professores
+  alunosIds?: string[];
+  alunosNomes?: string[];
+  professoresIds?: string[];
+  professoresNomes?: string[];
   observacoes?: string;
   data: string;
-  status?: 'confirmado' | 'pendente' | 'cancelado';
+  status?: 'vigente' | 'encerrado' | 'confirmado' | 'pendente' | 'cancelado';
 }
 
 async function createAgendamentoInFirebase(dados: AgendamentoData): Promise<string> {
@@ -35,9 +40,14 @@ async function createAgendamentoInFirebase(dados: AgendamentoData): Promise<stri
       alunoId: dados.alunoId || '',
       professor: dados.professor || '',
       professorId: dados.professorId || '',
+      // Novos campos para múltiplos alunos e professores
+      alunosIds: dados.alunosIds || [],
+      alunosNomes: dados.alunosNomes || [],
+      professoresIds: dados.professoresIds || [],
+      professoresNomes: dados.professoresNomes || [],
       observacoes: dados.observacoes || '',
       data: dados.data,
-      status: dados.status || (dados.aluno && dados.professor ? 'confirmado' : 'pendente'),
+      status: dados.status || 'vigente',
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp()
     };
@@ -72,9 +82,15 @@ async function getAllAgendamentosFromFirebase(): Promise<any[]> {
         alunoId: data.alunoId || '',
         professor: data.professor || '',
         professorId: data.professorId || '',
+        // Novos campos
+        alunosIds: data.alunosIds || [],
+        alunosNomes: data.alunosNomes || [],
+        professoresIds: data.professoresIds || [],
+        professoresNomes: data.professoresNomes || [],
+        vagasDisponiveis: data.vagasDisponiveis || 0,
         observacoes: data.observacoes || '',
         data: data.data || '',
-        status: data.status || 'confirmado',
+        status: data.status || 'vigente',
         createdAt: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
         updatedAt: data.updatedAt && data.updatedAt.toDate ? data.updatedAt.toDate().toISOString() : new Date().toISOString()
       });
@@ -104,9 +120,15 @@ async function getAgendamentoFromFirebase(firebaseId: string): Promise<any | nul
         alunoId: data?.alunoId || '',
         professor: data?.professor || '',
         professorId: data?.professorId || '',
+        // Novos campos
+        alunosIds: data?.alunosIds || [],
+        alunosNomes: data?.alunosNomes || [],
+        professoresIds: data?.professoresIds || [],
+        professoresNomes: data?.professoresNomes || [],
+        vagasDisponiveis: data?.vagasDisponiveis || 0,
         observacoes: data?.observacoes || '',
         data: data?.data || '',
-        status: data?.status || 'confirmado',
+        status: data?.status || 'vigente',
         createdAt: data?.createdAt && data.createdAt.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
         updatedAt: data?.updatedAt && data.updatedAt.toDate ? data.updatedAt.toDate().toISOString() : new Date().toISOString()
       };
@@ -127,12 +149,18 @@ async function updateAgendamentoInFirebase(firebaseId: string, dados: Partial<Ag
 
     if (dados.localEstagio !== undefined) updateData.localEstagio = dados.localEstagio;
     if (dados.area !== undefined) updateData.area = dados.area;
+    if (dados.vagasDisponiveis !== undefined) updateData.vagasDisponiveis = dados.vagasDisponiveis;
     if (dados.horarioInicio !== undefined) updateData.horarioInicio = dados.horarioInicio;
     if (dados.horarioFim !== undefined) updateData.horarioFim = dados.horarioFim;
     if (dados.aluno !== undefined) updateData.aluno = dados.aluno;
     if (dados.alunoId !== undefined) updateData.alunoId = dados.alunoId;
     if (dados.professor !== undefined) updateData.professor = dados.professor;
     if (dados.professorId !== undefined) updateData.professorId = dados.professorId;
+    // Novos campos
+    if (dados.alunosIds !== undefined) updateData.alunosIds = dados.alunosIds;
+    if (dados.alunosNomes !== undefined) updateData.alunosNomes = dados.alunosNomes;
+    if (dados.professoresIds !== undefined) updateData.professoresIds = dados.professoresIds;
+    if (dados.professoresNomes !== undefined) updateData.professoresNomes = dados.professoresNomes;
     if (dados.observacoes !== undefined) updateData.observacoes = dados.observacoes;
     if (dados.data !== undefined) updateData.data = dados.data;
     if (dados.status !== undefined) updateData.status = dados.status;
@@ -206,6 +234,7 @@ export class AgendamentosController {
       const dadosAgendamento: AgendamentoData = {
         localEstagio,
         area,
+        vagasDisponiveis,
         horarioInicio,
         horarioFim,
         aluno,

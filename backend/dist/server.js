@@ -9,7 +9,6 @@ const helmet_1 = __importDefault(require("helmet"));
 const morgan_1 = __importDefault(require("morgan"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const path_1 = __importDefault(require("path"));
-require("./config/production");
 const comunicadosRoutes_1 = __importDefault(require("./routes/comunicadosRoutes"));
 const alunosRoutes_1 = __importDefault(require("./routes/alunosRoutes"));
 const professoresRoutes_1 = __importDefault(require("./routes/professoresRoutes"));
@@ -22,6 +21,8 @@ const ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:5175',
+    'http://31.97.255.226',
+    'http://31.97.255.226:5173',
     process.env.FRONTEND_URL || 'http://localhost:5173',
 ];
 const AVAILABLE_ROUTES = [
@@ -68,14 +69,6 @@ const startServer = (port) => {
         }
     });
 };
-const securityMiddleware_1 = require("./middleware/securityMiddleware");
-const rateLimitMiddleware_1 = require("./middleware/rateLimitMiddleware");
-const auditMiddleware_1 = require("./middleware/auditMiddleware");
-const ssrfMiddleware_1 = require("./middleware/ssrfMiddleware");
-app.use(securityMiddleware_1.securityHeadersMiddleware);
-if (!IS_DEVELOPMENT) {
-    app.use((0, securityMiddleware_1.validateHostHeader)(['localhost:3001', 'localhost']));
-}
 app.use((0, helmet_1.default)({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     contentSecurityPolicy: IS_DEVELOPMENT ? false : {
@@ -100,12 +93,6 @@ app.use((0, helmet_1.default)({
 app.use((0, morgan_1.default)(IS_DEVELOPMENT ? 'dev' : 'combined', {
     skip: (req) => req.url === '/health'
 }));
-app.use(securityMiddleware_1.suspiciousActivityLogger);
-app.use(securityMiddleware_1.preventParameterPollution);
-app.use((0, securityMiddleware_1.requestTimeout)(30000));
-app.use(rateLimitMiddleware_1.apiRateLimit);
-app.use(auditMiddleware_1.auditMiddleware);
-app.use(ssrfMiddleware_1.preventSSRF);
 app.use((0, cors_1.default)({
     origin: function (origin, callback) {
         if (!origin || ALLOWED_ORIGINS.includes(origin)) {
@@ -130,9 +117,9 @@ app.use('/uploads', (req, res, next) => {
     res.header('Access-Control-Allow-Methods', 'GET');
     res.header('Cross-Origin-Resource-Policy', 'cross-origin');
     next();
-}, express_1.default.static(path_1.default.join(__dirname, 'public/uploads')));
+}, express_1.default.static(path_1.default.join(__dirname, __dirname.includes('dist') ? '../public/uploads' : 'public/uploads')));
 if (IS_DEVELOPMENT) {
-    app.use('/test', express_1.default.static(path_1.default.join(__dirname, 'public')));
+    app.use('/test', express_1.default.static(path_1.default.join(__dirname, __dirname.includes('dist') ? '../public' : 'public')));
 }
 app.get('/health', (req, res) => {
     res.json({
@@ -173,6 +160,8 @@ app.use((error, req, res, next) => {
         timestamp: new Date().toISOString()
     });
 });
-startServer(PORT);
+if (require.main === module) {
+    startServer(PORT);
+}
 exports.default = app;
 //# sourceMappingURL=server.js.map

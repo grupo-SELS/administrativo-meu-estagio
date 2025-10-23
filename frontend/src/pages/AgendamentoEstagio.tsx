@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
 
-import { apiService } from '../services/apiService';
+import apiService from '../services/apiService';
 
 interface Aluno {
     id: string;
@@ -20,6 +20,11 @@ interface Estagio {
     area: string;
     vagasDisponiveis: number;
     professor?: string;
+    alunosIds?: string[];
+    alunosNomes?: string[];
+    professoresIds?: string[];
+    professoresNomes?: string[];
+    status?: 'vigente' | 'encerrado';
 }
 
 interface AtribuicoesEstagio {
@@ -30,10 +35,9 @@ interface AtribuicoesEstagio {
 }
 
 export default function AgendamentoEstagio() {
-    const { showSuccess, showError, showInfo } = useToast();
+    const { showSuccess, showError, showWarning } = useToast();
     const { confirm, ConfirmComponent } = useConfirm();
     const [estagios, setEstagios] = useState<Estagio[]>([]);
-    // const [alunoSelecionado, setAlunoSelecionado] = useState<string | null>(null);
     const [estagioSelecionado, setEstagioSelecionado] = useState<string | null>(null);
     const [alunos, setAlunos] = useState<Aluno[]>([]);
     const [loadingAlunos, setLoadingAlunos] = useState(true);
@@ -48,7 +52,7 @@ export default function AgendamentoEstagio() {
             setLoadingAlunos(true);
             setErroAlunos(null);
             try {
-                const response = await apiService.get<any>('/api/alunos');
+                const response = await apiService.get<any>('/alunos');
                 if (response && Array.isArray(response.alunos)) {
                     setAlunos(response.alunos);
                 } else {
@@ -82,10 +86,26 @@ export default function AgendamentoEstagio() {
     const [estagioVisualizando, setEstagioVisualizando] = useState<string | null>(null);
     const [alunosPage, setAlunosPage] = useState(1);
     const [professoresPage, setProfessoresPage] = useState(1);
-    const itemsPerPage = 15;
+    const [estagiosPage, setEstagiosPage] = useState(1);
+    const itemsPerPageAlunos = 5;
+    const itemsPerPageProfessores = 5;
+    const itemsPerPageEstagios = 2;
+    
+
+    const [mostrarOcupados, setMostrarOcupados] = useState(false);
+    const [modalEditarAberto, setModalEditarAberto] = useState(false);
+    const [estagioEditando, setEstagioEditando] = useState<Estagio | null>(null);
+    const [formEdicao, setFormEdicao] = useState({
+        local: '',
+        area: '',
+        horarioInicio: '',
+        horarioFim: '',
+        vagasDisponiveis: 0,
+        status: 'vigente' as 'vigente' | 'encerrado'
+    });
 
     useEffect(() => {
-        // Monitora mudanças nas atribuições do estágio selecionado
+        
     }, [estagioSelecionado, atribuicoes]);
 
     useEffect(() => {
@@ -93,7 +113,7 @@ export default function AgendamentoEstagio() {
             setLoadingEstagios(true);
             setErroEstagios(null);
             try {
-                const response = await apiService.listarAgendamentos();
+                const response = await apiService.get<any>('/agendamentos');
                 if (response && Array.isArray(response.agendamentos)) {
                     const estagiosData = response.agendamentos.map((agendamento: any) => ({
                         id: agendamento.id,
@@ -132,7 +152,7 @@ export default function AgendamentoEstagio() {
             setLoadingProfessores(true);
             setErroProfessores(null);
             try {
-                const response = await apiService.listarProfessores();
+                const response = await apiService.get<any>('/professores');
                 if (response && Array.isArray(response.professores)) {
                     setProfessores(response.professores);
                 } else {
@@ -151,11 +171,101 @@ export default function AgendamentoEstagio() {
     }, []);
 
     const handleExportarCSV = () => {
-        showInfo('Exportando agendamentos para CSV...');
-    };
+        try {
 
-    const handleEditarCampoEstagio = (estagioId: string) => {
-        showInfo(`Editando campo de estágio: ${estagioId}`);
+            if (estagios.length === 0) {
+                showWarning('Não há estágios cadastrados para exportar.');
+                return;
+            }
+
+
+            const csvLines: string[] = [];
+            
+
+            csvLines.push('RELATÓRIO DE AGENDAMENTOS DE ESTÁGIO');
+            csvLines.push(`Data de Geração: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`);
+            csvLines.push(''); 
+
+
+            estagios.forEach((estagio, index) => {
+                // Buscar atribuições deste estágio
+                const atribuicao = atribuicoes.find(a => a.estagioId === estagio.id);
+                
+
+                const professorAtribuido = atribuicao?.professorId 
+                    ? professores.find(p => p.id === atribuicao.professorId)
+                    : null;
+                
+
+                const alunosAtribuidos = atribuicao?.alunosIds
+                    ? alunos.filter(a => atribuicao.alunosIds.includes(a.id))
+                    : [];
+
+
+                csvLines.push(`ESTÁGIO ${index + 1}`);
+                
+
+                csvLines.push(`Local:,${estagio.local || 'Local não informado'}`);
+                csvLines.push(`Área:,${estagio.area || 'Área não informada'}`);
+                csvLines.push(`Horários:,${estagio.horarios?.length > 0 ? estagio.horarios.join(', ') : 'Horário não informado'}`);
+                csvLines.push(`Vagas Disponíveis:,,,${estagio.vagasDisponiveis}`);
+                csvLines.push(`Vagas Preenchidas:,,,${alunosAtribuidos.length}`);
+                csvLines.push('');
+                
+
+                csvLines.push('Professor Orientador:');
+                csvLines.push('Nome,Matrícula,Polo,Horário');
+                if (professorAtribuido) {
+                    const horarioProfessor = professorAtribuido.horario || estagio.horarios?.join(' - ') || '';
+                    csvLines.push(`${professorAtribuido.nome},${professorAtribuido.matricula || 'N/A'},${professorAtribuido.polo || 'resende'},${horarioProfessor}`);
+                } else {
+                    csvLines.push('Nenhum professor atribuído,,,');
+                }
+                csvLines.push('');
+                
+
+                csvLines.push('Alunos no Estágio:');
+                csvLines.push('Nome,Matrícula,Polo,Horário');
+                if (alunosAtribuidos.length > 0) {
+                    alunosAtribuidos.forEach((aluno) => {
+                        const horarioAluno = aluno.horario || estagio.horarios?.join(' - ') || '';
+                        csvLines.push(`${aluno.nome},${aluno.matricula || 'N/A'},${aluno.polo || 'voltaredonda'},${horarioAluno}`);
+                    });
+                } else {
+                    csvLines.push('Nenhum aluno atribuído,,,');
+                }
+                csvLines.push('');
+            });
+
+
+            const csvContent = csvLines.join('\n');
+
+
+            const BOM = '\uFEFF';
+            const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+
+
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            
+
+            const dataHora = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+            link.setAttribute('download', `agendamentos-estagio-${dataHora}.csv`);
+            
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+
+            URL.revokeObjectURL(url);
+
+            showSuccess('CSV exportado com sucesso!');
+        } catch (error) {
+            console.error('Erro ao exportar CSV:', error);
+            showError('Erro ao exportar CSV. Tente novamente.');
+        }
     };
 
     const handleDeletarEstagio = async (estagioId: string) => {
@@ -195,6 +305,120 @@ export default function AgendamentoEstagio() {
         }
     };
 
+
+    const handleSalvarAtribuicoes = async (estagioId: string, mostrarMensagem: boolean = true) => {
+        try {
+            const atribuicao = atribuicoes.find(a => a.estagioId === estagioId);
+            if (!atribuicao) {
+                if (mostrarMensagem) {
+                    showWarning('Nenhuma atribuição encontrada para este estágio.');
+                }
+                return;
+            }
+
+
+            const alunosNomes = alunos
+                .filter(a => atribuicao.alunosIds.includes(a.id))
+                .map(a => a.nome);
+            
+            const professoresNomes = atribuicao.professorId 
+                ? [professores.find(p => p.id === atribuicao.professorId)?.nome || '']
+                : [];
+
+            const professoresIds = atribuicao.professorId ? [atribuicao.professorId] : [];
+
+
+            await apiService.updateAgendamento(estagioId, {
+                alunosIds: atribuicao.alunosIds,
+                alunosNomes: alunosNomes,
+                professoresIds: professoresIds,
+                professoresNomes: professoresNomes
+            });
+
+            if (mostrarMensagem) {
+                showSuccess('Atribuições salvas com sucesso!');
+            }
+            
+
+            const response = await apiService.get<any>('/agendamentos');
+            if (response && Array.isArray(response.agendamentos)) {
+                const estagiosData = response.agendamentos.map((agendamento: any) => ({
+                    id: agendamento.id,
+                    local: agendamento.localEstagio,
+                    horarios: [agendamento.horarioInicio, agendamento.horarioFim],
+                    area: agendamento.area,
+                    vagasDisponiveis: agendamento.vagasDisponiveis || 0,
+                    alunosIds: agendamento.alunosIds || [],
+                    alunosNomes: agendamento.alunosNomes || [],
+                    professoresIds: agendamento.professoresIds || [],
+                    professoresNomes: agendamento.professoresNomes || [],
+                    status: agendamento.status || 'vigente'
+                }));
+                setEstagios(estagiosData);
+            }
+        } catch (error: any) {
+            console.error('❌ Erro ao salvar atribuições:', error);
+            if (mostrarMensagem) {
+                showError('Erro ao salvar atribuições. Verifique o console para mais detalhes.');
+            }
+        }
+    };
+
+
+    const handleAbrirModalEdicao = (estagio: Estagio) => {
+        setEstagioEditando(estagio);
+        setFormEdicao({
+            local: estagio.local,
+            area: estagio.area,
+            horarioInicio: estagio.horarios[0] || '',
+            horarioFim: estagio.horarios[1] || '',
+            vagasDisponiveis: estagio.vagasDisponiveis,
+            status: estagio.status || 'vigente'
+        });
+        setModalEditarAberto(true);
+    };
+
+
+    const handleSalvarEdicao = async () => {
+        if (!estagioEditando) return;
+
+        try {
+            await apiService.updateAgendamento(estagioEditando.id, {
+                localEstagio: formEdicao.local,
+                area: formEdicao.area,
+                horarioInicio: formEdicao.horarioInicio,
+                horarioFim: formEdicao.horarioFim,
+                vagasDisponiveis: formEdicao.vagasDisponiveis,
+                status: formEdicao.status
+            });
+
+            showSuccess('Estágio atualizado com sucesso!');
+            setModalEditarAberto(false);
+            setEstagioEditando(null);
+
+
+            const response = await apiService.get<any>('/agendamentos');
+            if (response && Array.isArray(response.agendamentos)) {
+                const estagiosData = response.agendamentos.map((agendamento: any) => ({
+                    id: agendamento.id,
+                    local: agendamento.localEstagio,
+                    horarios: [agendamento.horarioInicio, agendamento.horarioFim],
+                    area: agendamento.area,
+                    vagasDisponiveis: agendamento.vagasDisponiveis || 0,
+                    alunosIds: agendamento.alunosIds || [],
+                    alunosNomes: agendamento.alunosNomes || [],
+                    professoresIds: agendamento.professoresIds || [],
+                    professoresNomes: agendamento.professoresNomes || [],
+                    status: agendamento.status || 'vigente'
+                }));
+                setEstagios(estagiosData);
+            }
+        } catch (error: any) {
+            console.error('❌ Erro ao salvar edição:', error);
+            showError('Erro ao salvar edição. Verifique o console para mais detalhes.');
+        }
+    };
+
     const polosDisponiveis = useMemo(() => {
         const polos = Array.from(new Set(alunos.map(a => a.polo).filter(Boolean)));
         return polos;
@@ -211,17 +435,35 @@ export default function AgendamentoEstagio() {
         });
     }, [alunos, searchTerm, filterPolo]);
 
+
+    const filteredEstagios = useMemo(() => {
+        if (!mostrarOcupados) {
+            return estagios;
+        }
+        return estagios.filter(e => {
+            const temAlunos = (e.alunosIds && e.alunosIds.length > 0) || 
+                             atribuicoes.some(a => a.estagioId === e.id && a.alunosIds.length > 0);
+            return temAlunos;
+        });
+    }, [estagios, mostrarOcupados, atribuicoes]);
+
     
-    const alunosTotalPages = Math.max(1, Math.ceil(filteredAlunos.length / itemsPerPage));
-    const alunosStartIndex = (alunosPage - 1) * itemsPerPage;
-    const alunosEndIndex = alunosStartIndex + itemsPerPage;
+    const alunosTotalPages = Math.max(1, Math.ceil(filteredAlunos.length / itemsPerPageAlunos));
+    const alunosStartIndex = (alunosPage - 1) * itemsPerPageAlunos;
+    const alunosEndIndex = alunosStartIndex + itemsPerPageAlunos;
     const currentAlunos = filteredAlunos.slice(alunosStartIndex, alunosEndIndex);
 
     
-    const professoresTotalPages = Math.max(1, Math.ceil(professores.length / itemsPerPage));
-    const professoresStartIndex = (professoresPage - 1) * itemsPerPage;
-    const professoresEndIndex = professoresStartIndex + itemsPerPage;
+    const professoresTotalPages = Math.max(1, Math.ceil(professores.length / itemsPerPageProfessores));
+    const professoresStartIndex = (professoresPage - 1) * itemsPerPageProfessores;
+    const professoresEndIndex = professoresStartIndex + itemsPerPageProfessores;
     const currentProfessores = professores.slice(professoresStartIndex, professoresEndIndex);
+
+    
+    const estagiosTotalPages = Math.max(1, Math.ceil(filteredEstagios.length / itemsPerPageEstagios));
+    const estagiosStartIndex = (estagiosPage - 1) * itemsPerPageEstagios;
+    const estagiosEndIndex = estagiosStartIndex + itemsPerPageEstagios;
+    const currentEstagios = filteredEstagios.slice(estagiosStartIndex, estagiosEndIndex);
 
     
     useEffect(() => {
@@ -451,7 +693,7 @@ export default function AgendamentoEstagio() {
                                         <div className="flex gap-3 justify-end mt-4">
                                             <button
                                                 className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md font-medium text-sm"
-                                                onClick={() => {
+                                                onClick={async () => {
                                                     if (professorSelecionadoId && estagioSelecionado) {
                                                         const professorSelecionado = professores.find(p => p.id === professorSelecionadoId);
 
@@ -475,6 +717,12 @@ export default function AgendamentoEstagio() {
                                                             }
                                                             return novasAtribuicoes;
                                                         });
+                                                        
+
+                                                        setTimeout(async () => {
+                                                            await handleSalvarAtribuicoes(estagioSelecionado, false);
+                                                            showSuccess('Professor atribuído com sucesso!');
+                                                        }, 100);
                                                     }
                                                     setAtribuindoProfessor(false);
                                                     setProfessorSelecionadoId(null);
@@ -590,7 +838,7 @@ export default function AgendamentoEstagio() {
                                         <div className="flex gap-3 justify-end mt-4">
                                             <button
                                                 className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md font-medium text-sm"
-                                                onClick={() => {
+                                                onClick={async () => {
                                                     if (estagioSelecionado && alunosAtribuidosIds.length > 0) {
                                                         setAtribuicoes(prev => {
                                                             const existe = prev.find(a => a.estagioId === estagioSelecionado);
@@ -612,6 +860,11 @@ export default function AgendamentoEstagio() {
                                                             }
                                                             return novasAtribuicoes;
                                                         });
+                                                        
+                                                        setTimeout(async () => {
+                                                            await handleSalvarAtribuicoes(estagioSelecionado, false);
+                                                            showSuccess('Alunos atribuídos com sucesso!');
+                                                        }, 100);
                                                     }
                                                     setAtribuindoAlunos(false);
                                                     setAlunosAtribuidosIds([]);
@@ -635,16 +888,31 @@ export default function AgendamentoEstagio() {
 
                         <section className="bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900 rounded-2xl shadow-2xl border border-gray-700/50 flex flex-col" style={{ overflow: 'visible' }}>
                             <div className="bg-gradient-to-r from-green-900/50 to-green-800/50 px-6 py-4 border-b border-gray-700 rounded-t-2xl">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
-                                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                        </svg>
+                                <div className="flex justify-between items-center">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+                                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h2 className="text-xl font-bold text-white">Locais de Estágio</h2>
+                                            <p className="text-green-300 text-xs">Vagas disponíveis para agendamento</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h2 className="text-xl font-bold text-white">Locais de Estágio</h2>
-                                        <p className="text-green-300 text-xs">Vagas disponíveis para agendamento</p>
-                                    </div>
+                                    <button
+                                        className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 shadow-lg ${
+                                            mostrarOcupados 
+                                                ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                                : 'bg-green-700 hover:bg-green-600 text-white'
+                                        }`}
+                                        onClick={() => {
+                                            setMostrarOcupados(!mostrarOcupados);
+                                            setEstagiosPage(1);
+                                        }}
+                                    >
+                                        {mostrarOcupados ? 'Todos' : 'Ocupados'}
+                                    </button>
                                 </div>
                             </div>
                             <div className="p-6 flex-1 scrollbar-styled" style={{ overflowY: 'auto', overflowX: 'visible' }}>
@@ -654,12 +922,12 @@ export default function AgendamentoEstagio() {
                                 <div className="text-red-400 text-center py-8">{erroEstagios}</div>
                             ) : (
                             <div className="flex flex-col gap-6" style={{ overflow: 'visible' }}>
-                                {estagios.length === 0 && (
+                                {currentEstagios.length === 0 && (
                                     <div className="text-gray-400 text-center py-8">
                                         Nenhum estágio disponível no momento.
                                     </div>
                                 )}
-                                {estagios.map((estagio: Estagio) => (
+                                {currentEstagios.map((estagio: Estagio) => (
                                     <div
                                         key={estagio.id}
                                         className={`relative rounded-xl p-5 shadow-xl cursor-pointer transition-all duration-300 border-2 ${
@@ -680,7 +948,19 @@ export default function AgendamentoEstagio() {
                                         
                                         <div className="flex justify-between items-start mb-3">
                                             <div className="flex-1">
-                                                <h3 className="text-lg font-bold text-white mb-1">{estagio.area}</h3>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <h3 className="text-lg font-bold text-white">{estagio.area}</h3>
+                                                    {estagio.status === 'encerrado' && (
+                                                        <span className="px-2 py-0.5 rounded-md bg-red-600 text-white text-xs font-bold">
+                                                            Encerrado
+                                                        </span>
+                                                    )}
+                                                    {estagio.status === 'vigente' && (
+                                                        <span className="px-2 py-0.5 rounded-md bg-green-600 text-white text-xs font-bold">
+                                                            Vigente
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <p className="text-sm text-gray-300 flex items-center gap-1">
                                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -773,14 +1053,14 @@ export default function AgendamentoEstagio() {
                                                             className="w-full text-left px-4 py-2.5 text-sm text-white hover:bg-gray-600 flex items-center gap-2 transition-colors border-t border-gray-600"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleEditarCampoEstagio(estagio.id);
+                                                                handleAbrirModalEdicao(estagio);
                                                                 setMenuAberto(null);
                                                             }}
                                                         >
                                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                             </svg>
-                                                            Editar Campo
+                                                            Editar Estágio
                                                         </button>
                                                         <button
                                                             className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-600 hover:text-white rounded-b-lg flex items-center gap-2 transition-colors border-t border-gray-600"
@@ -802,6 +1082,33 @@ export default function AgendamentoEstagio() {
                                     </div>
                                 ))}
                             </div>
+                            )}
+
+                            {estagiosTotalPages > 1 && estagios.length > 0 && (
+                                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-700 px-6">
+                                    <div className="text-xs text-gray-400">
+                                        {estagiosStartIndex + 1}-{Math.min(estagiosEndIndex, estagios.length)} de {estagios.length}
+                                    </div>
+                                    <div className="flex gap-1">
+                                        <button
+                                            onClick={() => setEstagiosPage(prev => Math.max(1, prev - 1))}
+                                            disabled={estagiosPage === 1}
+                                            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-xs transition-all"
+                                        >
+                                            ←
+                                        </button>
+                                        <span className="px-3 py-1 text-gray-300 text-xs">
+                                            {estagiosPage}/{estagiosTotalPages}
+                                        </span>
+                                        <button
+                                            onClick={() => setEstagiosPage(prev => Math.min(estagiosTotalPages, prev + 1))}
+                                            disabled={estagiosPage === estagiosTotalPages}
+                                            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-xs transition-all"
+                                        >
+                                            →
+                                        </button>
+                                    </div>
+                                </div>
                             )}
                             </div>
                         </section>
@@ -956,6 +1263,130 @@ export default function AgendamentoEstagio() {
                     </div>
                 </div>
             )}
+
+            {modalEditarAberto && estagioEditando && (
+                <div 
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+                    onClick={() => setModalEditarAberto(false)}
+                >
+                    <div 
+                        className="bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 max-w-2xl w-full max-h-[80vh] overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4 flex items-center justify-between border-b border-gray-700">
+                            <div>
+                                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    Editar Estágio
+                                </h3>
+                                <p className="text-blue-200 text-sm mt-1">
+                                    Atualize as informações do local de estágio
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setModalEditarAberto(false)}
+                                className="text-gray-300 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
+                                aria-label="Fechar modal"
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div className="p-6 overflow-y-auto max-h-[calc(80vh-180px)]">
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">Local do Estágio</label>
+                                    <input
+                                        type="text"
+                                        value={formEdicao.local}
+                                        onChange={(e) => setFormEdicao({ ...formEdicao, local: e.target.value })}
+                                        className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-blue-400"
+                                        placeholder="Ex: Hospital Municipal"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">Área</label>
+                                    <input
+                                        type="text"
+                                        value={formEdicao.area}
+                                        onChange={(e) => setFormEdicao({ ...formEdicao, area: e.target.value })}
+                                        className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-blue-400"
+                                        placeholder="Ex: Enfermagem"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">Horário Início</label>
+                                        <input
+                                            type="time"
+                                            value={formEdicao.horarioInicio}
+                                            onChange={(e) => setFormEdicao({ ...formEdicao, horarioInicio: e.target.value })}
+                                            className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-blue-400"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">Horário Fim</label>
+                                        <input
+                                            type="time"
+                                            value={formEdicao.horarioFim}
+                                            onChange={(e) => setFormEdicao({ ...formEdicao, horarioFim: e.target.value })}
+                                            className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-blue-400"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">Vagas Disponíveis</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={formEdicao.vagasDisponiveis}
+                                        onChange={(e) => setFormEdicao({ ...formEdicao, vagasDisponiveis: parseInt(e.target.value) || 0 })}
+                                        className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-blue-400"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">Status</label>
+                                    <select
+                                        value={formEdicao.status}
+                                        onChange={(e) => setFormEdicao({ ...formEdicao, status: e.target.value as 'vigente' | 'encerrado' })}
+                                        className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-blue-400"
+                                    >
+                                        <option value="vigente">Vigente</option>
+                                        <option value="encerrado">Encerrado</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-gray-700 px-6 py-4 flex justify-end gap-3 border-t border-gray-600">
+                            <button
+                                onClick={() => setModalEditarAberto(false)}
+                                className="bg-gray-600 hover:bg-gray-500 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleSalvarEdicao}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                                Salvar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
             <ConfirmComponent />
         </>
     );

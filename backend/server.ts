@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import path from 'path';
-import './config/production';
+// import './config/production';
 
 import comunicadosRoutes from './routes/comunicadosRoutes';
 import alunosRoutes from './routes/alunosRoutes';
@@ -23,6 +23,8 @@ const ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5175',
+  'http://31.97.255.226',
+  'http://31.97.255.226:5173',
   process.env.FRONTEND_URL || 'http://localhost:5173',
 ];
 
@@ -81,18 +83,19 @@ const startServer = (port: number): void => {
 };
 
 
-import { securityHeadersMiddleware, suspiciousActivityLogger, preventParameterPollution, requestTimeout, validateHostHeader } from './middleware/securityMiddleware';
-import { apiRateLimit } from './middleware/rateLimitMiddleware';
-import { auditMiddleware } from './middleware/auditMiddleware';
-import { preventSSRF } from './middleware/ssrfMiddleware';
+// Middlewares de segurança temporariamente desabilitados para debug
+// import { securityHeadersMiddleware, suspiciousActivityLogger, preventParameterPollution, requestTimeout, validateHostHeader } from './middleware/securityMiddleware';
+// import { apiRateLimit } from './middleware/rateLimitMiddleware';
+// import { auditMiddleware } from './middleware/auditMiddleware';
+// import { preventSSRF } from './middleware/ssrfMiddleware';
 
 
-app.use(securityHeadersMiddleware);
+// app.use(securityHeadersMiddleware);
 
 
-if (!IS_DEVELOPMENT) {
-  app.use(validateHostHeader(['localhost:3001', 'localhost']));
-}
+// if (!IS_DEVELOPMENT) {
+//   app.use(validateHostHeader(['localhost:3001', 'localhost']));
+// }
 
 
 app.use(
@@ -125,22 +128,13 @@ app.use(morgan(IS_DEVELOPMENT ? 'dev' : 'combined', {
 }));
 
 
-app.use(suspiciousActivityLogger);
-
-
-app.use(preventParameterPollution);
-
-
-app.use(requestTimeout(30000)); 
-
-
-app.use(apiRateLimit);
-
-
-app.use(auditMiddleware);
-
-
-app.use(preventSSRF);
+// Middlewares de segurança temporariamente desabilitados para debug
+// app.use(suspiciousActivityLogger);
+// app.use(preventParameterPollution);
+// app.use(requestTimeout(30000)); 
+// app.use(apiRateLimit);
+// app.use(auditMiddleware);
+// app.use(preventSSRF);
 
 app.use(
   cors({
@@ -174,12 +168,14 @@ app.use(
     res.header('Cross-Origin-Resource-Policy', 'cross-origin');
     next();
   },
-  express.static(path.join(__dirname, 'public/uploads'))
+  // Se estiver rodando do dist, aponta para ../public, senão para ./public
+  express.static(path.join(__dirname, __dirname.includes('dist') ? '../public/uploads' : 'public/uploads'))
 );
 
 
 if (IS_DEVELOPMENT) {
-  app.use('/test', express.static(path.join(__dirname, 'public')));
+  // Se estiver rodando do dist, aponta para ../public, senão para ./public
+  app.use('/test', express.static(path.join(__dirname, __dirname.includes('dist') ? '../public' : 'public')));
 }
 
 
@@ -233,6 +229,8 @@ app.use((error: any, req: express.Request, res: express.Response, next: express.
 });
 
 
-startServer(PORT as number);
+if (require.main === module) {
+  startServer(PORT as number);
+}
 
 export default app;

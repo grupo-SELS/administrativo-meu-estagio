@@ -5,7 +5,7 @@ import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 
 import { Header } from '../components/Header';
-import { apiService } from '../services/apiService';
+import apiService from '../services/apiService';
 import { AutocompleteInput } from '../components/AutocompleteInput';
 import '../styles/NovoAgendamento.css';
 
@@ -38,6 +38,8 @@ interface Evento {
   end: Date;
   desc?: string;
   id?: string;
+  vagasOcupadas?: number;
+  vagasDisponiveis?: number;
 }
 
 interface FormularioAgendamento {
@@ -211,6 +213,10 @@ export const NovoAgendamento = () => {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [dataSelecionada, setDataSelecionada] = useState<Date | null>(null);
   const [formulario, setFormulario] = useState<FormularioAgendamento>(INITIAL_FORM_STATE);
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [currentView, setCurrentView] = useState<any>('month');
+  const [showModal, setShowModal] = useState(false);
+  const [eventosDoDia, setEventosDoDia] = useState<Evento[]>([]);
   
 
   const [alunos, setAlunos] = useState<Aluno[]>([]);
@@ -224,7 +230,7 @@ export const NovoAgendamento = () => {
   useEffect(() => {
     async function fetchAlunos() {
       try {
-        const response = await apiService.get<any>('/api/alunos');
+        const response = await apiService.get<any>('/alunos');
         if (response && Array.isArray(response.alunos)) {
           setAlunos(response.alunos);
         }
@@ -234,29 +240,45 @@ export const NovoAgendamento = () => {
     }
     fetchAlunos();
     
-
-    setProfessores([
-      { id: 'p1', nome: 'Maria Oliveira', matricula: 'PROF1234', polo: 'Volta Redonda' },
-      { id: 'p2', nome: 'João Souza', matricula: 'PROF5678', polo: 'Resende' },
-      { id: 'p3', nome: 'Ana Lima', matricula: 'PROF9101', polo: 'Angra dos Reis' },
-      { id: 'p4', nome: 'Carlos Silva', matricula: 'PROF2222', polo: 'Volta Redonda' },
-      { id: 'p5', nome: 'Fernanda Costa', matricula: 'PROF3333', polo: 'Resende' },
-    ]);
+    // Buscar professores da API
+    async function fetchProfessores() {
+      try {
+        const response = await apiService.listarProfessores();
+        if (response && Array.isArray(response)) {
+          setProfessores(response.map((prof: any) => ({
+            id: prof.id,
+            nome: prof.nome,
+            matricula: prof.matricula || '',
+            polo: prof.polo || ''
+          })));
+        }
+      } catch (err) {
+        console.error('Erro ao buscar professores:', err);
+      }
+    }
+    fetchProfessores();
   }, []);
 
 
   useEffect(() => {
+    let isSubscribed = true; // Prevenir atualizações após desmontagem
+    
     async function fetchAgendamentos() {
       try {
         const response = await apiService.listarAgendamentos();
-        if (response && Array.isArray(response.agendamentos)) {
+        if (response && Array.isArray(response.agendamentos) && isSubscribed) {
           const eventosCarregados: Evento[] = response.agendamentos.map((agendamento: any) => {
             const [horaInicio, minutoInicio] = agendamento.horarioInicio.split(':').map(Number);
             const [horaFim, minutoFim] = agendamento.horarioFim.split(':').map(Number);
             const dataAgendamento = new Date(agendamento.data + 'T00:00:00');
 
+            // Determinar se o agendamento está com vagas disponíveis
+            const vagasOcupadas = agendamento.alunosIds?.length || (agendamento.aluno ? 1 : 0);
+            const vagasDisponiveis = agendamento.vagasDisponiveis || 1;
+            const statusVagas = vagasOcupadas >= vagasDisponiveis ? ' [OCUPADO]' : ` [${vagasDisponiveis - vagasOcupadas} vaga(s)]`;
+
             return {
-              title: `${agendamento.area} - ${agendamento.localEstagio}`,
+              title: `${agendamento.area || 'Estágio'} - ${agendamento.localEstagio}${statusVagas}`,
               start: new Date(
                 dataAgendamento.getFullYear(),
                 dataAgendamento.getMonth(),
@@ -271,29 +293,50 @@ export const NovoAgendamento = () => {
                 horaFim,
                 minutoFim
               ),
-              desc: `Aluno: ${agendamento.aluno} | Professor: ${agendamento.professor}${
+              desc: `Aluno: ${agendamento.aluno || 'Não atribuído'} | Professor: ${agendamento.professor || 'Não atribuído'}${
                 agendamento.observacoes ? `\nObs: ${agendamento.observacoes}` : ''
-              }`,
-              id: agendamento.id
+              }\nVagas: ${vagasOcupadas}/${vagasDisponiveis}${vagasOcupadas >= vagasDisponiveis ? ' - Status: OCUPADO' : ' - Status: DISPONÍVEL'}`,
+              id: agendamento.id,
+              vagasOcupadas,
+              vagasDisponiveis
             };
           });
           setEventos(eventosCarregados);
+          console.log(`✅ ${eventosCarregados.length} agendamentos carregados do banco de dados`);
         }
       } catch (err) {
         console.error('Erro ao buscar agendamentos:', err);
       }
     }
+    
     fetchAgendamentos();
-  }, []);
+    
+    // Cleanup function para prevenir atualizações após desmontagem
+    return () => {
+      isSubscribed = false;
+    };
+  }, []); // Executa APENAS UMA VEZ na montagem do componente
 
   const handleSelectSlot = useCallback(({ start }: SlotInfo) => {
     setDataSelecionada(start);
   }, []);
 
   const handleSelectEvent = useCallback((event: Evento) => {
-    const mensagem = `Evento: ${event.title}\n${event.desc || ''}`;
-    alert(mensagem);
-  }, []);
+    // Verificar se há múltiplos eventos no mesmo dia
+    const eventosMesmoDia = eventos.filter(e => {
+      const eventDate = new Date(e.start);
+      const clickedDate = new Date(event.start);
+      return eventDate.toDateString() === clickedDate.toDateString();
+    });
+
+    if (eventosMesmoDia.length > 1) {
+      setEventosDoDia(eventosMesmoDia);
+      setShowModal(true);
+    } else {
+      const mensagem = `Evento: ${event.title}\n${event.desc || ''}`;
+      alert(mensagem);
+    }
+  }, [eventos]);
 
   const handleInputChange = useCallback((campo: keyof FormularioAgendamento, valor: string | number) => {
     setFormulario((prev) => ({ ...prev, [campo]: valor }));
@@ -385,8 +428,12 @@ export const NovoAgendamento = () => {
       const [horaInicio, minutoInicio] = horarioInicio.split(':').map(Number);
       const [horaFim, minutoFim] = horarioFim.split(':').map(Number);
 
+      // Determinar se o agendamento estará ocupado
+      const vagasOcupadas = aluno ? 1 : 0;
+      const statusVagas = vagasOcupadas >= vagasDisponiveis ? ' [OCUPADO]' : ` [${vagasDisponiveis - vagasOcupadas} vaga(s)]`;
+      
       const novoEvento: Evento = {
-        title: `${area || 'Estágio'} - ${localEstagio}`,
+        title: `${area || 'Estágio'} - ${localEstagio}${statusVagas}`,
         start: new Date(
           dataSelecionada.getFullYear(),
           dataSelecionada.getMonth(),
@@ -403,7 +450,9 @@ export const NovoAgendamento = () => {
         ),
         desc: `Aluno: ${aluno || 'Não atribuído'} | Professor: ${professor || 'Não atribuído'}${
           observacoes ? `\nObs: ${observacoes}` : ''
-        }`,
+        }\nVagas: ${vagasOcupadas}/${vagasDisponiveis}${vagasOcupadas >= vagasDisponiveis ? ' - Status: OCUPADO' : ' - Status: DISPONÍVEL'}`,
+        vagasOcupadas,
+        vagasDisponiveis
       };
 
 
@@ -429,7 +478,10 @@ export const NovoAgendamento = () => {
           });
         }
 
+        // Atualizar estado local
         setEventos((prev) => [...prev, ...eventosParaAdicionar]);
+        
+        console.log(`✅ ${eventosParaAdicionar.length} agendamento(s) criado(s) e salvo(s) no banco de dados`);
         
         limparFormulario();
 
@@ -481,6 +533,10 @@ export const NovoAgendamento = () => {
                   culture="pt-BR"
                   components={calendarComponents}
                   messages={CALENDAR_MESSAGES}
+                  date={currentDate}
+                  onNavigate={(newDate) => setCurrentDate(newDate)}
+                  view={currentView}
+                  onView={(newView) => setCurrentView(newView)}
                 />
               </div>
             </section>
@@ -732,6 +788,94 @@ export const NovoAgendamento = () => {
           </div>
         </div>
       </main>
+
+      {/* Modal para múltiplos agendamentos no mesmo dia */}
+      {showModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowModal(false)}
+        >
+          <div 
+            className="bg-gray-800 rounded-xl shadow-2xl border border-gray-700 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-gray-800 border-b border-gray-700 p-6 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-white">
+                Agendamentos do Dia
+              </h2>
+              <button
+                onClick={() => setShowModal(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+                aria-label="Fechar modal"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {eventosDoDia.length > 0 && (
+                <div className="text-gray-300 mb-4">
+                  <p className="text-sm">
+                    Data: <span className="font-semibold">{format(eventosDoDia[0].start, 'dd/MM/yyyy', { locale: ptBR })}</span>
+                  </p>
+                  <p className="text-sm">
+                    Total de agendamentos: <span className="font-semibold">{eventosDoDia.length}</span>
+                  </p>
+                </div>
+              )}
+
+              {eventosDoDia.map((evento, index) => {
+                const horarioInicio = format(evento.start, 'HH:mm');
+                const horarioFim = format(evento.end, 'HH:mm');
+                
+                return (
+                  <div 
+                    key={index}
+                    className="bg-gray-700 rounded-lg p-4 border border-gray-600 hover:border-blue-500 transition-colors"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="text-lg font-semibold text-white">
+                        {evento.title}
+                      </h3>
+                      <span className="text-blue-400 text-sm font-medium">
+                        {horarioInicio} - {horarioFim}
+                      </span>
+                    </div>
+                    
+                    {evento.desc && (
+                      <div className="text-gray-300 text-sm space-y-1 mt-3">
+                        {evento.desc.split('\n').map((linha, i) => (
+                          <p key={i} className="flex items-start">
+                            {linha.includes(':') ? (
+                              <>
+                                <span className="font-semibold mr-2">{linha.split(':')[0]}:</span>
+                                <span>{linha.split(':').slice(1).join(':')}</span>
+                              </>
+                            ) : (
+                              <span>{linha}</span>
+                            )}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="sticky bottom-0 bg-gray-800 border-t border-gray-700 p-6">
+              <button
+                onClick={() => setShowModal(false)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

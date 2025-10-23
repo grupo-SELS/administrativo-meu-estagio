@@ -27,12 +27,12 @@ router.get('/comunicados/:id', apiRateLimit, validateId('id'), controller.buscar
 router.post('/comunicados', 
   strictRateLimit,
   devAuthBypass,
-  sanitizeBody,
-  validateRequired(['titulo', 'conteudo']),
-  uploadMiddleware,
+  uploadMiddleware,  // ✅ Primeiro: processar FormData
+  processUploads,    // ✅ Segundo: processar arquivos
+  sanitizeBody,      // ✅ Terceiro: sanitizar campos
   validateFileType(['jpg', 'jpeg', 'png', 'gif', 'webp']),
-  validateFileSize(5), 
-  processUploads,
+  validateFileSize(5),
+  // validateRequired removido - validação será feita no controller
   controller.criar.bind(controller)
 );
 

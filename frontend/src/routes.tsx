@@ -19,6 +19,7 @@ import { TermosCondicoes } from './pages/TermosCondicoes';
 import { PoliticaPrivacidade } from './pages/PoliticaPrivacidade';
 import { NovoAgendamento } from './pages/NovoAgendamento';
 import { ProfessorCreate } from './pages/ProfessoresCreate';
+import ProfessorEdit from './pages/ProfessorEdit';
 
 export const AppRoutes = () => {
     return (
@@ -99,6 +100,11 @@ export const AppRoutes = () => {
                     </ProtectedRoute>
                 }
                 />
+                <Route path='/professores/editar/:id' element={
+                    <ProtectedRoute>
+                        <ProfessorEdit />
+                    </ProtectedRoute>
+                } />
                 <Route path='/pontos/correcao' element={
                     <ProtectedRoute>
                         <PontosFaltas />

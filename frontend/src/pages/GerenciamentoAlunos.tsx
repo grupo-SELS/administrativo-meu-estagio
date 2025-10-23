@@ -5,7 +5,7 @@ import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { useState, useEffect } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
-import { apiService } from '../services/apiService';
+import  apiService  from '../services/apiService';
 import { Link } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
@@ -161,7 +161,7 @@ function GerenciamentoAlunos() {
         });
         async function fetchAlunos() {
             try {
-                const response = await apiService.get(`/api/alunos`);
+                const response = await apiService.get(`/alunos`);
                 if (response !== undefined && response !== null && typeof response === 'object' && 'alunos' in response && Array.isArray((response as any).alunos)) {
                     let alunos = (response as { alunos: Student[] }).alunos;
                     let alunosFiltrados = alunos.filter((aluno: Student) => aluno.type === 'aluno');
@@ -240,7 +240,7 @@ function GerenciamentoAlunos() {
         if (!confirmed) return;
 
         try {
-            await apiService.delete(`/api/alunos/${id}`);
+            await apiService.deleteAluno(id);
 
 
             setStudents(students.filter(s => s.id !== id));
@@ -276,7 +276,7 @@ function GerenciamentoAlunos() {
 
         try {
             const deletePromises = Array.from(selectedStudentIds).map(id =>
-                apiService.delete(`/api/alunos/${id}`)
+                apiService.deleteAluno(id)
             );
 
             await Promise.allSettled(deletePromises).then(results => {
