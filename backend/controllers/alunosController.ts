@@ -225,26 +225,27 @@ export class AlunosController {
       const { polo, categoria } = req.query;
 
       const MAX_ALUNOS = 500;
+      const PAGE_SIZE = 100; 
       let alunos: any[] = [];
       let query = usersCollection.where('type', '==', 'aluno');
-      let snapshot = await query.get();
 
-      // Primeiro lote
-      for (const doc of snapshot.docs) {
-        if (alunos.length >= MAX_ALUNOS) break;
-        alunos.push({ id: doc.id, ...doc.data() });
-      }
-
-      // Se há documentos e ainda não atingimos o limite, continuar buscando a partir do último
-      while (snapshot.docs.length === 50 && alunos.length < MAX_ALUNOS) {
-        const lastDoc = snapshot.docs.at(-1);
-        if (!lastDoc) break;
-        
-        snapshot = await query.startAfter(lastDoc).get();
-        
+      
+      let snapshot = await query.limit(PAGE_SIZE).get();
+      while (snapshot && snapshot.docs.length > 0 && alunos.length < MAX_ALUNOS) {
         for (const doc of snapshot.docs) {
           if (alunos.length >= MAX_ALUNOS) break;
           alunos.push({ id: doc.id, ...doc.data() });
+        }
+
+        if (alunos.length >= MAX_ALUNOS) break;
+
+        
+        if (snapshot.docs.length === PAGE_SIZE) {
+          const lastDoc = snapshot.docs.at(-1);
+          if (!lastDoc) break;
+          snapshot = await query.startAfter(lastDoc).limit(PAGE_SIZE).get();
+        } else {
+          break; 
         }
       }
 
@@ -260,7 +261,7 @@ export class AlunosController {
         );
       }
 
-      // Headers para evitar cache
+      
       res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.set('Pragma', 'no-cache');
       res.set('Expires', '0');
@@ -313,7 +314,7 @@ export class AlunosController {
     registrarAuditoriaCPF({
       timestamp: new Date(),
       operation: 'UPDATE',
-      userId: '', // Will be set in editar method
+      userId: '', 
       collection: 'alunos',
       recordId: alunoId,
       cpfMasked: maskCPFForLogs(resultadoCPF.cpfSanitizado),
